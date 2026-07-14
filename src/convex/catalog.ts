@@ -7,15 +7,21 @@ export const getVehicles = query({
     isPopular: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    let q = ctx.db.query("vehicles");
+    let vehicles;
     
     if (args.category) {
-      q = q.withIndex("category", (q) => q.eq("category", args.category!));
+      vehicles = await ctx.db
+        .query("vehicles")
+        .withIndex("category", (q) => q.eq("category", args.category!))
+        .collect();
     } else if (args.isPopular) {
-      q = q.withIndex("isPopular", (q) => q.eq("isPopular", args.isPopular!));
+      vehicles = await ctx.db
+        .query("vehicles")
+        .withIndex("isPopular", (q) => q.eq("isPopular", args.isPopular!))
+        .collect();
+    } else {
+      vehicles = await ctx.db.query("vehicles").collect();
     }
-    
-    const vehicles = await q.collect();
     
     // Fetch thumbnail images for each vehicle
     return Promise.all(
