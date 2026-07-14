@@ -278,3 +278,124 @@ export const getMyRank = authQuery({
     return ranks;
   },
 });
+
+// ─── Get Manager Leaderboard ───────────────────────────────────────────────
+
+export const getManagerLeaderboard = authQuery({
+  args: {
+    periodType: v.optional(v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly"), v.literal("quarterly"), v.literal("yearly"))),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const periodType = args.periodType ?? "monthly";
+
+    let periodStart: number;
+    switch (periodType) {
+      case "daily": periodStart = today.getTime(); break;
+      case "weekly": {
+        const ws = new Date(today);
+        ws.setDate(ws.getDate() - ws.getDay());
+        periodStart = ws.getTime();
+        break;
+      }
+      case "monthly": periodStart = new Date(today.getFullYear(), today.getMonth(), 1).getTime(); break;
+      case "quarterly": {
+        const q = Math.floor(today.getMonth() / 3);
+        periodStart = new Date(today.getFullYear(), q * 3, 1).getTime();
+        break;
+      }
+      case "yearly": periodStart = new Date(today.getFullYear(), 0, 1).getTime(); break;
+    }
+
+    const entries = await ctx.db.query("leaderboard")
+      .withIndex("periodType_scope", (q: any) => q.eq("periodType", periodType).eq("scope", "individual"))
+      .filter((q: any) => q.gte(q.field("periodStart"), periodStart))
+      .order("asc")
+      .collect();
+
+    // Filter to only include manager roles
+    const managerRoles = ["regional_director", "regional_manager", "dealer_principal", "branch_manager", "sales_manager", "team_leader"];
+    
+    const enriched = await Promise.all(
+      entries.map(async (entry) => {
+        if (entry.employeeId) {
+          const emp = await ctx.db.get(entry.employeeId);
+          return { ...entry, employee: emp };
+        }
+        return entry;
+      })
+    );
+
+    const managersOnly = enriched.filter(e => e.employee && e.employee.role && managerRoles.includes(e.employee.role));
+    
+    // Sort by XP descending just to be safe, though they should be somewhat sorted
+    managersOnly.sort((a, b) => b.totalXP - a.totalXP);
+    
+    // Re-rank them amongst themselves
+    managersOnly.forEach((m, idx) => m.rank = idx + 1);
+
+    return managersOnly.slice(0, args.limit ?? 10);
+  },
+});
+
+// ─── Get Manager Performance Details (Team Drilldown) ──────────────────────
+
+export const getManagerPerformanceDetails = authQuery({
+  args: {
+    managerId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const targetManagerId = args.managerId ?? userId;
+    const manager = await ctx.db.get(targetManagerId);
+    if (!manager) return null;
+
+    // Get direct reportees
+    const reportees = await ctx.db.query("users")
+      .withIndex("managerId", (q) => q.eq("managerId", targetManagerId))
+      .collect();
+
+    // Get stats for each reportee
+    const today = new Date();
+    const periodStart = new Date(today.getFullYear(), today.getMonth(), 1).getTime(); // Monthly stats
+
+    const teamStats = await Promise.all(reportees.map(async (emp) => {
+      // Find their monthly XP from leaderboard
+      const lbEntry = await ctx.db.query("leaderboard")
+        .withIndex("periodType_scope", (q: any) => q.eq("periodType", "monthly").eq("scope", "individual"))
+        .filter((q: any) => q.and(
+          q.gte(q.field("periodStart"), periodStart),
+          q.eq(q.field("employeeId"), emp._id)
+        ))
+        .first();
+
+      const totalXP = lbEntry?.totalXP ?? emp.totalXP ?? 0;
+      const salesCount = lbEntry?.salesCount ?? 0;
+      const deliveriesCount = lbEntry?.deliveriesCount ?? 0;
+
+      return {
+        employee: emp,
+        totalXP,
+        salesCount,
+        deliveriesCount
+      };
+    }));
+
+    // Sort team by contribution
+    teamStats.sort((a, b) => b.totalXP - a.totalXP);
+
+    const totalTeamXP = teamStats.reduce((sum, member) => sum + member.totalXP, 0);
+    const totalTeamSales = teamStats.reduce((sum, member) => sum + member.salesCount, 0);
+
+    return {
+      manager,
+      totalTeamXP,
+      totalTeamSales,
+      teamStats
+    };
+  }
+});

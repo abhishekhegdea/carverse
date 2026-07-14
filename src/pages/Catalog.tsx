@@ -8,14 +8,33 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Car, Loader2, ArrowRight, Gauge, Settings2, ShieldCheck, Tag } from "lucide-react";
-import { useMutation } from "convex/react";
-
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Car, Loader2, Gauge, Settings2, ShieldCheck, Tag, Info, Fuel, Calendar, MapPin } from "lucide-react";
 export default function Catalog() {
   const vehicles = useQuery(api.catalog.getVehicles, {});
   const createEnquiry = useMutation(api.workflow.createEnquiry);
   
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+  const [detailsVehicle, setDetailsVehicle] = useState<any>(null);
   const [isEnquiring, setIsEnquiring] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<string>("All Models");
+
+  // Filter vehicles based on active category
+  const filteredVehicles = vehicles?.filter(v => {
+    if (activeCategory === "All Models") return true;
+    if (activeCategory === "Electric") return v.category === "electric";
+    if (activeCategory === "SUVs") return v.category === "suv";
+    if (activeCategory === "Sedans") return v.category === "sedan" || v.category === "passenger";
+    if (activeCategory === "Luxury") return v.category === "luxury";
+    return true;
+  }) || [];
 
   const handleEnquire = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -66,23 +85,28 @@ export default function Catalog() {
           </p>
         </div>
 
-        {/* Filters placeholder */}
+        {/* Filters */}
         <div className="flex items-center gap-4 mb-8 pb-4 border-b overflow-x-auto">
-          <Button variant="secondary" className="rounded-full">All Models</Button>
-          <Button variant="ghost" className="rounded-full">SUVs</Button>
-          <Button variant="ghost" className="rounded-full">Sedans</Button>
-          <Button variant="ghost" className="rounded-full">Electric</Button>
-          <Button variant="ghost" className="rounded-full">Luxury</Button>
+          {["All Models", "SUVs", "Sedans", "Electric", "Luxury"].map((cat) => (
+            <Button 
+              key={cat}
+              variant={activeCategory === cat ? "default" : "ghost"} 
+              className="rounded-full"
+              onClick={() => setActiveCategory(cat)}
+            >
+              {cat}
+            </Button>
+          ))}
         </div>
 
         {/* Vehicles Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {vehicles.length === 0 ? (
+          {filteredVehicles.length === 0 ? (
             <div className="col-span-full py-12 text-center text-muted-foreground">
               <p>No vehicles found in the catalog.</p>
             </div>
           ) : (
-            vehicles.map((vehicle) => (
+            filteredVehicles.map((vehicle) => (
               <Card key={vehicle._id} className="overflow-hidden group hover:shadow-xl transition-all duration-300 border-border/50 bg-card/40 backdrop-blur-sm">
                 <div className="aspect-[16/10] relative bg-secondary/30 overflow-hidden">
                   {vehicle.thumbnailUrl ? (
@@ -117,14 +141,21 @@ export default function Catalog() {
                 </CardHeader>
 
                 <CardContent className="space-y-4">
+                  {/* Dynamic stats based on category */}
                   <div className="grid grid-cols-3 gap-2">
                     <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-secondary/40 text-center">
                       <Gauge className="h-4 w-4 text-muted-foreground mb-1.5" />
-                      <span className="text-xs font-medium">18 kmpl</span>
+                      <span className="text-xs font-medium">
+                        {vehicle.category === "electric" ? "450 km" : 
+                         vehicle.category === "suv" ? "14 kmpl" : 
+                         vehicle.category === "luxury" ? "12 kmpl" : "18 kmpl"}
+                      </span>
                     </div>
                     <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-secondary/40 text-center">
                       <Settings2 className="h-4 w-4 text-muted-foreground mb-1.5" />
-                      <span className="text-xs font-medium">Auto</span>
+                      <span className="text-xs font-medium">
+                        {vehicle.category === "electric" ? "Direct" : "Auto"}
+                      </span>
                     </div>
                     <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-secondary/40 text-center">
                       <ShieldCheck className="h-4 w-4 text-muted-foreground mb-1.5" />
@@ -134,7 +165,7 @@ export default function Catalog() {
                 </CardContent>
 
                 <CardFooter className="pt-2 gap-3">
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full" onClick={() => setDetailsVehicle(vehicle)}>
                     View Details
                   </Button>
                   
@@ -161,6 +192,66 @@ export default function Catalog() {
                           Submit Enquiry
                         </Button>
                       </form>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* Details Dialog */}
+                  <Dialog open={detailsVehicle?._id === vehicle._id} onOpenChange={(open) => !open && setDetailsVehicle(null)}>
+                    <DialogContent className="sm:max-w-[600px]">
+                      <DialogHeader>
+                        <DialogTitle className="text-2xl">{vehicle.brand} {vehicle.model}</DialogTitle>
+                        <DialogDescription>
+                          Starting at ₹{(vehicle.startingPrice / 100000).toFixed(2)}L
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="mt-4 space-y-6">
+                        {vehicle.thumbnailUrl && (
+                          <div className="w-full h-64 rounded-xl overflow-hidden bg-secondary/20">
+                            <img 
+                              src={vehicle.thumbnailUrl} 
+                              alt={vehicle.model}
+                              className="object-cover w-full h-full"
+                            />
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="text-lg font-semibold mb-2">Overview</h4>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {vehicle.description || `The ${vehicle.brand} ${vehicle.model} is a premium ${vehicle.category} vehicle offering top-tier performance, advanced safety features, and incredible comfort. Designed for the modern driver, it combines elegance with cutting-edge technology.`}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                          <div className="flex flex-col gap-1 p-3 rounded-lg bg-secondary/20">
+                            <Fuel className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground uppercase">Type</span>
+                            <span className="text-sm font-semibold capitalize">{vehicle.category}</span>
+                          </div>
+                          <div className="flex flex-col gap-1 p-3 rounded-lg bg-secondary/20">
+                            <Settings2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground uppercase">Trans.</span>
+                            <span className="text-sm font-semibold">{vehicle.category === "electric" ? "Direct" : "Automatic"}</span>
+                          </div>
+                          <div className="flex flex-col gap-1 p-3 rounded-lg bg-secondary/20">
+                            <Gauge className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground uppercase">Range/Fuel</span>
+                            <span className="text-sm font-semibold">{vehicle.category === "electric" ? "450 km" : "16 kmpl"}</span>
+                          </div>
+                          <div className="flex flex-col gap-1 p-3 rounded-lg bg-secondary/20">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground uppercase">Availability</span>
+                            <span className="text-sm font-semibold text-emerald-500">In Stock</span>
+                          </div>
+                        </div>
+                        <div className="flex justify-end pt-4 gap-3">
+                          <Button variant="outline" onClick={() => setDetailsVehicle(null)}>Close</Button>
+                          <Button className="bg-gradient-to-r from-amber-500 to-orange-600" onClick={() => {
+                            setDetailsVehicle(null);
+                            setSelectedVehicle(vehicle);
+                          }}>
+                            Book Test Drive
+                          </Button>
+                        </div>
+                      </div>
                     </DialogContent>
                   </Dialog>
                 </CardFooter>

@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router";
 import { DelegatedChallenges } from "@/components/dashboard/DelegatedChallenges";
 import { ManagerDelegationPortal } from "@/components/dashboard/ManagerDelegationPortal";
+import { ManagerLeaderboardCard } from "@/components/dashboard/ManagerLeaderboardCard";
 
 function StatCard({ icon: Icon, label, value, sub, trend, className }: {
   icon: any; label: string; value: string | number; sub?: string; trend?: "up" | "down"; className?: string;
@@ -270,6 +271,11 @@ export default function Dashboard() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Manager Leaderboard (Only for Managers) */}
+              {user?.role && !user.role.endsWith("_executive") && user.role !== "customer" && (
+                <ManagerLeaderboardCard />
+              )}
 
               {/* Recent Activity */}
               <Card>
