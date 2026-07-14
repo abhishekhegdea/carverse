@@ -24,6 +24,7 @@ const Admin = lazy(() => import("./pages/Admin.tsx"));
 const Catalog = lazy(() => import("./pages/Catalog.tsx"));
 const Exchange = lazy(() => import("./pages/Exchange.tsx"));
 const Manager = lazy(() => import("./pages/Manager.tsx"));
+const Analytics = lazy(() => import("./pages/Analytics.tsx"));
 
 // Lazy load the authenticated layout
 const AppLayout = lazy(() => import("./App.tsx"));
@@ -152,6 +153,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/manager" element={<Manager />} />
+                <Route path="/analytics" element={<Analytics />} />
               </Route>
 
               {/* Fallback */}

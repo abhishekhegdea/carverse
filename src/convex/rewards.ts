@@ -2,6 +2,7 @@ import { authQuery, authMutation } from "./customAuth";
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "./authHelper";
+import { getLevelProgress } from "./schema";
 
 // ─── Reward Items ──────────────────────────────────────────────────────────
 
@@ -95,7 +96,6 @@ export const redeemReward = authMutation({
 
     // Deduct XP
     const newXP = userXP - reward.xpCost;
-    const { getLevelProgress } = await import("./schema");
     const newLevelInfo = getLevelProgress(newXP);
 
     await ctx.db.patch(userId, {
@@ -220,7 +220,6 @@ export const performSpin = authMutation({
 
     // Deduct XP
     const newXP = userXP - SPIN_COST;
-    const { getLevelProgress } = await import("./schema");
     const newLevelInfo = getLevelProgress(newXP);
 
     await ctx.db.patch(userId, {
