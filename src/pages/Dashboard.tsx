@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router";
+import { DelegatedChallenges } from "@/components/dashboard/DelegatedChallenges";
+import { ManagerDelegationPortal } from "@/components/dashboard/ManagerDelegationPortal";
 
 function StatCard({ icon: Icon, label, value, sub, trend, className }: {
   icon: any; label: string; value: string | number; sub?: string; trend?: "up" | "down"; className?: string;
@@ -215,6 +217,16 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Hierarchical Delegations */}
+            <div className="lg:col-span-2 space-y-6">
+              <DelegatedChallenges />
+              
+              {/* Only show manager portal for roles that aren't base level executives */}
+              {user?.role && !user.role.endsWith("_executive") && user.role !== "customer" && (
+                <ManagerDelegationPortal />
+              )}
+            </div>
 
             {/* Leaderboard Preview + Activity */}
             <div className="space-y-6">

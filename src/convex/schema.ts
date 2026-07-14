@@ -240,6 +240,28 @@ const schema = defineSchema(
       .index("challengeId", ["challengeId"])
       .index("employeeId_challengeId", ["employeeId", "challengeId"]),
 
+    // Delegated Challenges (Manager -> Employee)
+    assignedChallenges: defineTable({
+      assignerId: v.id("users"),
+      assigneeId: v.id("users"),
+      title: v.string(),
+      description: v.string(),
+      rewardXP: v.number(),
+      rewardBadgeId: v.optional(v.string()),
+      status: v.union(
+        v.literal("assigned"), 
+        v.literal("pending_approval"), 
+        v.literal("approved"), 
+        v.literal("rejected")
+      ),
+      assignedAt: v.number(),
+      completedAt: v.optional(v.number()),
+      approvedAt: v.optional(v.number()),
+      comments: v.optional(v.string()),
+    }).index("assigneeId", ["assigneeId"])
+      .index("assignerId", ["assignerId"])
+      .index("status", ["status"]),
+
     // Leaderboard entries (snapshot/incremental)
     leaderboard: defineTable({
       periodType: v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly"), v.literal("quarterly"), v.literal("yearly")),
