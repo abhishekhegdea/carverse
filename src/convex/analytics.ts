@@ -26,9 +26,9 @@ export const getDashboardStats = authQuery({
 
     const totalSales = mySales.length;
     const deliveredSales = mySales.filter(s => s.status === "delivered").length;
-    const pendingFinance = mySales.filter(s => s.status === "finance_pending").length;
-    const pendingRegistration = mySales.filter(s => s.status === "registration_pending").length;
-    const pendingDelivery = mySales.filter(s => s.status === "finance_approved" || s.status === "invoice_generated").length;
+    const pendingFinance = mySales.filter(s => s.status === "finance").length;
+    const pendingRegistration = mySales.filter(s => s.status === "registration").length;
+    const pendingDelivery = mySales.filter(s => s.status === "ready").length;
     const cancelledSales = mySales.filter(s => s.status === "cancelled").length;
     const totalRevenue = mySales.reduce((sum, s) => sum + (s.status === "delivered" ? s.amount : 0), 0);
 
@@ -198,11 +198,11 @@ export const getSalesFunnel = authQuery({
     }
 
     return {
-      bookings: sales.filter(s => s.status === "booking").length,
-      financePending: sales.filter(s => s.status === "finance_pending").length,
-      financeApproved: sales.filter(s => s.status === "finance_approved").length,
-      invoiceGenerated: sales.filter(s => s.status === "invoice_generated").length,
-      registrationPending: sales.filter(s => s.status === "registration_pending").length,
+      bookings: sales.filter(s => s.status === "booked").length,
+      financePending: sales.filter(s => s.status === "finance").length,
+      financeApproved: 0, // Merged into 'finance' and 'ready' in new pipeline
+      invoiceGenerated: sales.filter(s => s.status === "ready").length,
+      registrationPending: sales.filter(s => s.status === "registration").length,
       delivered: sales.filter(s => s.status === "delivered").length,
       cancelled: sales.filter(s => s.status === "cancelled").length,
       total: sales.length,
