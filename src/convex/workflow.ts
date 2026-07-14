@@ -97,7 +97,26 @@ export const createEnquiry = authMutation({
     amount: v.number(),
   },
   handler: async (ctx, args) => {
-    if (!ctx.userId) throw new Error("Unauthorized");
+    let assigneeId = ctx.userId;
+    if (!assigneeId) {
+      let receptionUser = await ctx.db.query("users").filter(q => q.eq(q.field("name"), "Reception Desk")).first();
+      if (!receptionUser) {
+        const newReceptionId = await ctx.db.insert("users", {
+          name: "Reception Desk",
+          email: "reception@carverse.com",
+          role: "sales_executive",
+          department: "Sales",
+          designation: "Receptionist",
+          level: 1,
+          totalXP: 0,
+          rank: "Rookie",
+          createdAt: Date.now(),
+        });
+        assigneeId = newReceptionId;
+      } else {
+        assigneeId = receptionUser._id;
+      }
+    }
 
     // 1. Create Customer
     const customerId = await ctx.db.insert("customers", {
@@ -108,7 +127,7 @@ export const createEnquiry = authMutation({
 
     // 2. Create Enquiry in Pipeline
     const saleId = await ctx.db.insert("sales", {
-      employeeId: ctx.userId,
+      employeeId: assigneeId,
       customerId,
       customerName: args.customerName,
       carType: args.carType as any,
@@ -126,26 +145,26 @@ export const createEnquiry = authMutation({
     await ctx.db.insert("workflowHistory", {
       saleId,
       newStage: "enquiry",
-      changedBy: ctx.userId,
+      changedBy: assigneeId,
       comments: "Lead Captured",
       timestamp: Date.now(),
     });
 
-    // 4. Award XP
-    const user = await ctx.db.get(ctx.userId);
+    // 4. Award XP (only if a real user submitted it, reception desk doesn't need to earn XP, but we can award it anyway)
+    const user = await ctx.db.get(assigneeId);
     const xp = XP_AWARDS["enquiry"];
     if (user && xp) {
       const balance = (user.totalXP || 0) + xp;
-      await ctx.db.patch(ctx.userId, { totalXP: balance });
+      await ctx.db.patch(assigneeId, { totalXP: balance });
       await ctx.db.insert("xpTransactions", {
-        employeeId: ctx.userId,
+        employeeId: assigneeId,
         amount: xp,
         eventType: "Enquiry Created",
         description: `New lead: ${args.customerName}`,
         balance,
         timestamp: Date.now(),
       });
-      await distributeHierarchyXP(ctx, ctx.userId, xp, "Enquiry Created");
+      await distributeHierarchyXP(ctx, assigneeId, xp, "Enquiry Created");
     }
 
     return saleId;
