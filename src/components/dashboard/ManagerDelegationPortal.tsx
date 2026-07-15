@@ -22,6 +22,7 @@ export function ManagerDelegationPortal() {
   const [selectedAssignee, setSelectedAssignee] = useState<string>("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [periodType, setPeriodType] = useState("daily");
   const [rewardXP, setRewardXP] = useState("100");
   const [dialogOpen, setDialogOpen] = useState(false);
   
@@ -41,6 +42,7 @@ export function ManagerDelegationPortal() {
         assigneeId: selectedAssignee as any,
         title,
         description,
+        periodType: periodType as any,
         rewardXP: parseInt(rewardXP),
       });
       toast.success("Challenge assigned successfully!");
@@ -156,6 +158,19 @@ export function ManagerDelegationPortal() {
                   <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Provide specific instructions..." />
                 </div>
                 <div className="space-y-2">
+                  <label className="text-sm font-medium">Period</label>
+                  <Select value={periodType} onValueChange={setPeriodType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <label className="text-sm font-medium">XP Reward</label>
                   <Input type="number" value={rewardXP} onChange={e => setRewardXP(e.target.value)} required min="10" max="5000" />
                 </div>
@@ -177,6 +192,11 @@ export function ManagerDelegationPortal() {
                     <Badge variant="outline" className="text-[10px] h-5">
                       {c.status.toUpperCase()}
                     </Badge>
+                    {c.periodType && (
+                      <Badge variant="secondary" className="text-[10px] h-5 capitalize">
+                        {c.periodType}
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">Assigned to {c.assigneeName} • {c.rewardXP} XP</p>
                 </div>

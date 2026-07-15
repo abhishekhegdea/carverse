@@ -28,7 +28,7 @@ const SCOPES = [
   { value: "department", label: "Department", icon: Users },
 ] as const;
 
-function Podium({ entries }: { entries: any[] }) {
+function Podium({ entries, scope }: { entries: any[], scope: string }) {
   if (!entries || entries.length === 0) return null;
 
   const podium = [entries[1], entries[0], entries[2]].filter(Boolean);
@@ -52,7 +52,7 @@ function Podium({ entries }: { entries: any[] }) {
               </AvatarFallback>
             </Avatar>
             <span className="text-sm font-medium text-center leading-tight max-w-24 truncate">
-              {entry?.employee?.name?.split(" ")[0] ?? "Unknown"}
+              {scope === "individual" ? (entry?.employee?.name?.split(" ")[0] ?? "Unknown") : (entry?.[scope] ?? "Group")}
             </span>
             <span className="text-xs text-muted-foreground">{entry?.totalXP?.toLocaleString()} XP</span>
             <div className={cn(
@@ -75,10 +75,7 @@ export default function Leaderboard() {
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly" | "quarterly" | "yearly">("monthly");
   const [scope, setScope] = useState<"individual" | "branch" | "dealer" | "region" | "department">("individual");
 
-  const topRanked = useQuery(api.leaderboard.getTopRanked, { periodType: period, limit: 50 });
-  const branchLeaderboard = scope !== "individual"
-    ? useQuery(api.leaderboard.getTopRanked, { periodType: period, limit: 20 })
-    : null;
+  const topRanked = useQuery(api.leaderboard.getTopRanked, { periodType: period, scope: scope, limit: 50 });
 
   const isLoading = !topRanked;
   const top3 = topRanked?.slice(0, 3) ?? [];
@@ -129,7 +126,7 @@ export default function Leaderboard() {
           {scope === "individual" && top3.length > 0 && (
             <Card>
               <CardContent className="p-6">
-                <Podium entries={top3} />
+                <Podium entries={top3} scope={scope} />
               </CardContent>
             </Card>
           )}
@@ -182,16 +179,20 @@ export default function Leaderboard() {
                         <div className="col-span-5 flex items-center gap-2.5 min-w-0">
                           <Avatar className="h-8 w-8 shrink-0">
                             <AvatarFallback className="text-[10px] bg-secondary">
-                              {entry.employee?.name?.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) ?? "U"}
+                              {scope === "individual" 
+                                ? (entry.employee?.name?.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) ?? "U")
+                                : (entry[scope]?.slice(0, 2).toUpperCase() ?? "G")}
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">
-                              {entry.employee?.name ?? "Unknown"}
+                              {scope === "individual" ? (entry.employee?.name ?? "Unknown") : (entry[scope] ?? "Unknown Group")}
                               {isMe && <Badge variant="secondary" className="ml-2 text-[10px] h-4">You</Badge>}
                             </p>
                             <p className="text-xs text-muted-foreground truncate">
-                              {entry.employee?.role?.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) ?? ""}
+                              {scope === "individual" 
+                                ? (entry.employee?.role?.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) ?? "")
+                                : `${scope.charAt(0).toUpperCase() + scope.slice(1)}`}
                             </p>
                           </div>
                         </div>

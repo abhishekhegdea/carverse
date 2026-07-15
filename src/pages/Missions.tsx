@@ -15,8 +15,10 @@ import { cn } from "@/lib/utils";
 function ChallengeCard({ challenge, progress }: {
   challenge: any; progress: any;
 }) {
-  const pct = Math.min(((progress?.progress ?? 0) / challenge.target) * 100, 100);
   const completed = progress?.completed ?? false;
+  const target = progress?.target ?? challenge.calculatedTarget ?? challenge.target ?? 1;
+  const current = progress?.currentProgress ?? 0;
+  const pct = Math.min((current / target) * 100, 100);
 
   return (
     <Card className={cn("card-hover", completed && "ring-1 ring-emerald-500/20")}>
@@ -34,8 +36,8 @@ function ChallengeCard({ challenge, progress }: {
               )}
             </div>
             <div>
-              <p className="text-sm font-semibold">{challenge.title}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{challenge.description}</p>
+              <p className="text-sm font-semibold">{challenge.template?.name || challenge.title}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{challenge.template?.description || challenge.description}</p>
             </div>
           </div>
           {completed && (
@@ -47,21 +49,18 @@ function ChallengeCard({ challenge, progress }: {
         <div className="mt-4">
           <div className="flex items-center justify-between text-xs mb-1.5">
             <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium">{progress?.progress ?? 0} / {challenge.target}</span>
+            <span className="font-medium">{progress?.currentProgress ?? 0} / {progress?.target ?? challenge.target}</span>
           </div>
           <Progress value={pct} className={cn("h-2", completed && "bg-emerald-500/10")} />
         </div>
         <div className="mt-3 flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
             <Zap className="h-3.5 w-3.5" />
-            <span className="font-medium">+{challenge.rewardXP} XP</span>
+            <span className="font-medium">+{challenge.calculatedXP ?? challenge.rewardXP} XP</span>
           </div>
-          {challenge.rewardBadge && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Gift className="h-3 w-3" />
-              <span>Badge reward</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1 text-xs text-amber-500 font-semibold">
+             <span>{challenge.calculatedCoins ?? 0} Coins</span>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -69,17 +68,19 @@ function ChallengeCard({ challenge, progress }: {
 }
 
 export default function Missions() {
-  const dailyChallenges = useQuery(api.challenges.getActiveChallenges, { type: "daily" });
-  const weeklyChallenges = useQuery(api.challenges.getActiveChallenges, { type: "weekly" });
-  const monthlyChallenges = useQuery(api.challenges.getActiveChallenges, { type: "monthly" });
+  const allMissions = useQuery(api.missionEngine.getMyActiveMissions);
+  
+  const dailyChallenges = allMissions?.filter((m: any) => m.template?.periodType === "daily") || [];
+  const weeklyChallenges = allMissions?.filter((m: any) => m.template?.periodType === "weekly") || [];
+  const monthlyChallenges = allMissions?.filter((m: any) => m.template?.periodType === "monthly") || [];
 
-  const isLoading = !dailyChallenges || !weeklyChallenges || !monthlyChallenges;
+  const isLoading = !allMissions;
 
   const getCompletedCount = (challenges: any[]) =>
     challenges?.filter((c: any) => c.progress?.completed).length ?? 0;
 
   const getTotalXP = (challenges: any[]) =>
-    challenges?.reduce((sum: number, c: any) => sum + (c.progress?.completed ? c.challenge.rewardXP : 0), 0) ?? 0;
+    challenges?.reduce((sum: number, c: any) => sum + (c.progress?.completed ? c.calculatedXP : 0), 0) ?? 0;
 
   const allLoading = <div className="space-y-4">
     {Array.from({ length: 3 }).map((_, i) => (
@@ -153,8 +154,8 @@ export default function Missions() {
           {isLoading ? allLoading : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {dailyChallenges && dailyChallenges.length > 0 ? (
-                dailyChallenges.map(({ challenge, progress }) => (
-                  <ChallengeCard key={challenge._id} challenge={challenge} progress={progress} />
+                dailyChallenges.map((mission: any) => (
+                  <ChallengeCard key={mission._id} challenge={mission} progress={mission.progress} />
                 ))
               ) : (
                 <div className="col-span-full text-center py-12 text-sm text-muted-foreground">
@@ -169,8 +170,8 @@ export default function Missions() {
           {isLoading ? allLoading : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {weeklyChallenges && weeklyChallenges.length > 0 ? (
-                weeklyChallenges.map(({ challenge, progress }) => (
-                  <ChallengeCard key={challenge._id} challenge={challenge} progress={progress} />
+                weeklyChallenges.map((mission: any) => (
+                  <ChallengeCard key={mission._id} challenge={mission} progress={mission.progress} />
                 ))
               ) : (
                 <div className="col-span-full text-center py-12 text-sm text-muted-foreground">
@@ -185,8 +186,8 @@ export default function Missions() {
           {isLoading ? allLoading : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {monthlyChallenges && monthlyChallenges.length > 0 ? (
-                monthlyChallenges.map(({ challenge, progress }) => (
-                  <ChallengeCard key={challenge._id} challenge={challenge} progress={progress} />
+                monthlyChallenges.map((mission: any) => (
+                  <ChallengeCard key={mission._id} challenge={mission} progress={mission.progress} />
                 ))
               ) : (
                 <div className="col-span-full text-center py-12 text-sm text-muted-foreground">

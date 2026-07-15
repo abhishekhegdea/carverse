@@ -67,7 +67,7 @@ export const getRewards = authQuery({
         .collect();
     }
 
-    return { rewards, userXP };
+    return { rewards, userXP, lastFreeSpinAt: user?.lastFreeSpinAt };
   },
 });
 
@@ -212,20 +212,30 @@ export const performSpin = authMutation({
     const user = await ctx.db.get(userId);
     if (!user) throw new Error("User not found");
 
-    const SPIN_COST = 1000;
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+    const lastFreeSpinAt = user.lastFreeSpinAt ?? 0;
+    const isFreeSpin = Date.now() - lastFreeSpinAt >= TWENTY_FOUR_HOURS;
+    const SPIN_COST = 200;
+
     const userXP = user.totalXP ?? 0;
-    if (userXP < SPIN_COST) {
+    if (!isFreeSpin && userXP < SPIN_COST) {
       throw new Error(`Need ${SPIN_COST} XP to spin. You have ${userXP} XP.`);
     }
 
-    // Deduct XP
-    const newXP = userXP - SPIN_COST;
+    let newXP = userXP;
+    
+    // Deduct XP if it's not a free spin
+    if (!isFreeSpin) {
+      newXP = userXP - SPIN_COST;
+    }
+
     const newLevelInfo = getLevelProgress(newXP);
 
     await ctx.db.patch(userId, {
       totalXP: newXP,
       level: newLevelInfo.level,
       rank: newLevelInfo.title,
+      lastFreeSpinAt: isFreeSpin ? Date.now() : lastFreeSpinAt,
     });
 
     // Spin

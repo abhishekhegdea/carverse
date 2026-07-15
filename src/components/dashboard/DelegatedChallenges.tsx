@@ -37,7 +37,7 @@ export function DelegatedChallenges() {
         <CardDescription>Special missions assigned directly by your manager</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {challenges.map((c) => (
+        {challenges.map((c: any) => (
           <div key={c._id} className="p-3 bg-background rounded-lg border shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -50,6 +50,11 @@ export function DelegatedChallenges() {
                   } className="text-[10px] h-5">
                     {c.status.replace("_", " ").toUpperCase()}
                   </Badge>
+                  {c.periodType && (
+                    <Badge variant="secondary" className="text-[10px] h-5 capitalize">
+                      {c.periodType}
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{c.description}</p>
                 <div className="mt-2 text-xs font-medium text-amber-600 dark:text-amber-400">

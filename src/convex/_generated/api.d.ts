@@ -27,6 +27,7 @@ import type * as gamification from "../gamification.js";
 import type * as http from "../http.js";
 import type * as leaderboard from "../leaderboard.js";
 import type * as managerEngine from "../managerEngine.js";
+import type * as missionEngine from "../missionEngine.js";
 import type * as notifications from "../notifications.js";
 import type * as promotionEngine from "../promotionEngine.js";
 import type * as rewards from "../rewards.js";
@@ -60,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   leaderboard: typeof leaderboard;
   managerEngine: typeof managerEngine;
+  missionEngine: typeof missionEngine;
   notifications: typeof notifications;
   promotionEngine: typeof promotionEngine;
   rewards: typeof rewards;
