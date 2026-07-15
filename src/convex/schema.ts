@@ -161,6 +161,7 @@ const schema = defineSchema(
       promotionScore: v.optional(v.number()),
       leadershipScore: v.optional(v.number()),
       createdAt: v.optional(v.number()),
+      lastFreeSpinAt: v.optional(v.number()),
     }).index("email", ["email"])
       .index("role", ["role"])
       .index("branch", ["branch"])
@@ -254,6 +255,7 @@ const schema = defineSchema(
       assigneeId: v.id("users"),
       title: v.string(),
       description: v.string(),
+      periodType: v.optional(v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly"))),
       rewardXP: v.number(),
       rewardBadgeId: v.optional(v.string()),
       status: v.union(
@@ -612,6 +614,77 @@ const schema = defineSchema(
     }).index("employeeId", ["employeeId"])
       .index("saleId", ["saleId"]),
 
+    // ─── Gamification & Quest Engine ──────────────────────────────────────────
+
+    city_statistics: defineTable({
+      name: v.string(),
+      tier: v.union(v.literal("Tier 1"), v.literal("Tier 2"), v.literal("Tier 3")),
+      population: v.number(),
+      baseMultiplier: v.number(), // e.g., 1.30 for Tier 1
+    }).index("name", ["name"]),
+
+    branch_statistics: defineTable({
+      branchId: v.string(),
+      cityId: v.id("city_statistics"),
+      monthlyTarget: v.number(),
+      currentPerformance: v.number(), // Percentage e.g. 1.1 for 110%
+      averageFootfall: v.number(),
+    }).index("branchId", ["branchId"]),
+
+    mission_templates: defineTable({
+      name: v.string(),
+      description: v.string(),
+      actionType: v.union(v.literal("followup"), v.literal("quotation"), v.literal("test_drive"), v.literal("booking"), v.literal("finance"), v.literal("delivery"), v.literal("csat")),
+      baseTarget: v.number(),
+      baseXP: v.number(),
+      periodType: v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly"), v.literal("special")),
+      qualityMultiplier: v.number(), // Base multiplier for quality work
+      active: v.boolean(),
+    }).index("actionType", ["actionType"])
+      .index("periodType", ["periodType"]),
+
+    missions: defineTable({
+      templateId: v.id("mission_templates"),
+      employeeId: v.id("users"),
+      branchId: v.optional(v.string()),
+      calculatedTarget: v.number(),
+      calculatedXP: v.number(),
+      calculatedCoins: v.number(),
+      periodStart: v.number(),
+      periodEnd: v.number(),
+      status: v.union(v.literal("active"), v.literal("completed"), v.literal("expired")),
+    }).index("employeeId_status", ["employeeId", "status"]),
+
+    mission_progress: defineTable({
+      missionId: v.id("missions"),
+      employeeId: v.id("users"),
+      currentProgress: v.number(),
+      target: v.number(),
+      completed: v.boolean(),
+      completedAt: v.optional(v.number()),
+    }).index("missionId", ["missionId"])
+      .index("employeeId", ["employeeId"]),
+
+    challenge_templates: defineTable({
+      name: v.string(),
+      description: v.string(),
+      actionType: v.string(),
+      targetQuantity: v.number(),
+      timeLimitHours: v.optional(v.number()),
+      rewardXP: v.number(),
+      active: v.boolean(),
+    }),
+
+    challenge_progress: defineTable({
+      challengeId: v.id("challenge_templates"),
+      employeeId: v.id("users"),
+      currentProgress: v.number(),
+      target: v.number(),
+      startedAt: v.number(),
+      expiresAt: v.optional(v.number()),
+      completed: v.boolean(),
+    }).index("employeeId", ["employeeId"]),
+
     // Team Battles
     teamBattles: defineTable({
       periodType: v.string(), // "weekly"
@@ -648,6 +721,22 @@ const schema = defineSchema(
     }).index("managerId", ["managerId"])
       .index("employeeId", ["employeeId"])
       .index("timestamp", ["timestamp"]),
+
+    // Branch Races (Location Competitions)
+    branchRaces: defineTable({
+      title: v.string(),
+      description: v.string(),
+      targetSales: v.number(),
+      reward: v.string(),
+      status: v.union(v.literal("active"), v.literal("completed")),
+      winnerBranch: v.optional(v.string()),
+      progress: v.array(v.object({
+        branch: v.string(),
+        sales: v.number(),
+      })),
+      startedAt: v.number(),
+      completedAt: v.optional(v.number()),
+    }).index("status", ["status"]),
   },
   {
     schemaValidation: false,

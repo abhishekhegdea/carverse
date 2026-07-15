@@ -5,6 +5,8 @@ import { calculateMathematicalXP } from "./gameEngine";
 import { calculateAndAwardLeadershipXP } from "./managerEngine";
 import { checkAndProcessPromotion } from "./promotionEngine";
 import { awardCoins } from "./economyEngine";
+import { updateMissionProgress } from "./missionEngine";
+import { recordBranchSale } from "./raceEngine";
 
 const STAGES = [
   "enquiry", "assigned", "contacted", "visited", "test_drive", "quotation",
@@ -213,6 +215,19 @@ export const advanceStage = authMutation({
           averageCsatScore: sale.csatScore || 5.0, // simplified
           questCompletionPercentage: 1.0,
         });
+
+        // Trigger Quest Engine / Mission Progress
+        // Normalize the actionType string. e.g. "booked" -> "booking", "quotation" -> "quotation", "delivered" -> "delivery", "test_drive" -> "test_drive"
+        let actionType = args.newStage;
+        if (actionType === "booked") actionType = "booking";
+        if (actionType === "delivered") actionType = "delivery";
+        
+        await updateMissionProgress(ctx, ctx.userId, actionType, 1);
+
+        // If the sale is finalized (delivered), increment the branch race
+        if (args.newStage === "delivered" && user.branch) {
+          await recordBranchSale(ctx, user.branch);
+        }
       }
     }
   },

@@ -71,14 +71,14 @@ function RewardCard({ reward, canAfford, onRedeem, redeeming }: {
 }
 
 const SPIN_SECTORS = [
-  { label: "Double XP", color: "from-amber-400 to-amber-500", icon: Zap },
-  { label: "50 XP Bonus", color: "from-emerald-400 to-emerald-500", icon: Zap },
-  { label: "100 XP Bonus", color: "from-blue-400 to-blue-500", icon: Zap },
-  { label: "Lucky Badge", color: "from-violet-400 to-violet-500", icon: Gift },
-  { label: "Extra Leave", color: "from-rose-400 to-rose-500", icon: Heart },
-  { label: "Fuel Voucher", color: "from-orange-400 to-orange-500", icon: Fuel },
-  { label: "Lunch Coupon", color: "from-cyan-400 to-cyan-500", icon: Coffee },
-  { label: "No Luck", color: "from-slate-400 to-slate-500", icon: RotateCcw },
+  { label: "Mystery Chest", bg: "#06b6d4", color: "text-slate-900" },
+  { label: "No luck", bg: "#334155", color: "text-white" },
+  { label: "-20% XP", bg: "#ef4444", color: "text-white" },
+  { label: "2x XP Boost", bg: "#ea580c", color: "text-white" },
+  { label: "5x XP Boost", bg: "#f59e0b", color: "text-slate-900" },
+  { label: "JACKPOT!", bg: "#eab308", color: "text-slate-900" },
+  { label: "Coupon Drop", bg: "#3b82f6", color: "text-white" },
+  { label: "Badge Unlock", bg: "#a855f7", color: "text-white" },
 ];
 
 export default function Rewards() {
@@ -95,6 +95,8 @@ export default function Rewards() {
 
   const isLoading = !rewardsData;
   const userXP = rewardsData?.userXP ?? user?.totalXP ?? 0;
+  const lastFreeSpinAt = rewardsData?.lastFreeSpinAt ?? 0;
+  const isFreeSpinAvailable = Date.now() - lastFreeSpinAt >= 24 * 60 * 60 * 1000;
   const rewards = rewardsData?.rewards ?? [];
 
   const handleRedeem = async (rewardId: string) => {
@@ -219,45 +221,69 @@ export default function Rewards() {
         </div>
 
         <div className="space-y-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                Spin Wheel
-              </CardTitle>
-              <CardDescription>Unlock every 1,000 XP for a spin!</CardDescription>
-            </CardHeader>
-            <CardContent className="text-center">
-              <div className="relative w-48 h-48 mx-auto mb-4">
-                <div
-                  className="w-full h-full rounded-full border-4 border-secondary flex items-center justify-center relative overflow-hidden transition-transform duration-1000 ease-out"
-                  style={{ transform: `rotate(${spinRotation}deg)` }}
-                >
-                  {SPIN_SECTORS.map((sector, i) => {
-                    const angle = (360 / SPIN_SECTORS.length) * i;
-                    return (
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">Lucky Spin</h2>
+              <p className="text-sm text-muted-foreground mt-1">One free spin every 24h. Extra spins cost 200 XP. Outcomes range from jackpot to -20% XP.</p>
+            </div>
+            
+            <Card className="bg-[#1a1a1a] border-none shadow-xl pt-10 pb-6">
+              <CardContent className="text-center relative">
+                
+                {/* Wheel Pointer */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 w-6 h-6 bg-[#eab308] rotate-45 z-20 rounded-sm" />
+                
+                {/* The Wheel */}
+                <div className="relative w-72 h-72 sm:w-80 sm:h-80 mx-auto mb-8">
+                  <div
+                    className="w-full h-full rounded-full border-4 border-[#1a1a1a] shadow-2xl relative overflow-hidden transition-transform duration-[3000ms] ease-[cubic-bezier(0.1,0.7,0.1,1)]"
+                    style={{ 
+                      transform: `rotate(${spinRotation}deg)`,
+                      background: `conic-gradient(
+                        #06b6d4 0deg 45deg,
+                        #334155 45deg 90deg,
+                        #ef4444 90deg 135deg,
+                        #ea580c 135deg 180deg,
+                        #f59e0b 180deg 225deg,
+                        #eab308 225deg 270deg,
+                        #3b82f6 270deg 315deg,
+                        #a855f7 315deg 360deg
+                      )`
+                    }}
+                  >
+                    {/* Wheel Lines (separators) */}
+                    {SPIN_SECTORS.map((_, i) => (
                       <div
-                        key={sector.label}
-                        className="absolute inset-0"
-                        style={{
-                          transform: `rotate(${angle}deg)`,
-                          clipPath: `polygon(50% 50%, ${50 + 50 * Math.cos((angle - 22.5) * Math.PI / 180)}% ${50 + 50 * Math.sin((angle - 22.5) * Math.PI / 180)}%, ${50 + 50 * Math.cos((angle + 22.5) * Math.PI / 180)}% ${50 + 50 * Math.sin((angle + 22.5) * Math.PI / 180)}%)`,
-                          background: `linear-gradient(135deg, ${sector.color.replace("from-", "").replace(" to-", " ").split(" ")[0]} 0%, ${sector.color.replace("from-", "").replace(" to-", " ").split(" ")[2]} 100%)`,
-                        }}
+                        key={`line-${i}`}
+                        className="absolute top-0 left-1/2 w-0.5 h-1/2 bg-[#1a1a1a] origin-bottom z-10"
+                        style={{ transform: `rotate(${i * 45}deg)` }}
                       />
-                    );
-                  })}
-                  <div className="absolute inset-4 rounded-full bg-background flex items-center justify-center z-10">
-                    <span className="text-2xl">🎯</span>
+                    ))}
+                    
+                    {/* Wheel Text */}
+                    {SPIN_SECTORS.map((sector, i) => {
+                      const angle = (360 / SPIN_SECTORS.length) * i + 22.5;
+                      return (
+                        <div
+                          key={sector.label}
+                          className={cn("absolute inset-0 flex flex-col justify-start items-center pt-8 z-10", sector.color)}
+                          style={{
+                            transform: `rotate(${angle}deg)`,
+                          }}
+                        >
+                          <span className="text-[11px] sm:text-sm font-bold tracking-wider uppercase -rotate-90 origin-bottom mt-10 whitespace-nowrap">
+                            {sector.label}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
+                  
+                  {/* Center Circle */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-[#111] border-[6px] border-[#ea580c] z-20 shadow-inner" />
                 </div>
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-4 h-4 bg-destructive rotate-45 z-20" />
-              </div>
 
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Cost: <span className="font-semibold text-foreground">1,000 XP</span> per spin</p>
                 {spinResult && (
-                  <div className="p-3 rounded-lg bg-secondary/50">
+                  <div className="mb-6 p-3 rounded-lg bg-secondary/30 max-w-[250px] mx-auto border border-border/20">
                     <p className="text-sm font-semibold">{spinResult.reward}</p>
                     {spinResult.type !== "none" && (
                       <p className="text-xs text-muted-foreground mt-1">
@@ -267,17 +293,27 @@ export default function Rewards() {
                     )}
                   </div>
                 )}
-                <Button className="w-full" disabled={isSpinning || userXP < 1000} onClick={handleSpin}>
-                  {isSpinning ? (
-                    <><Loader2 className="h-4 w-4 animate-spin mr-2" />Spinning...</>
-                  ) : (
-                    <><Sparkles className="h-4 w-4 mr-2" />Spin for 1,000 XP</>
-                  )}
-                </Button>
-                {userXP < 1000 && <p className="text-xs text-muted-foreground">Need {1000 - userXP} more XP to spin</p>}
-              </div>
-            </CardContent>
-          </Card>
+
+                <div className="flex items-center justify-center gap-3">
+                  <Button 
+                    className="bg-[#f97316] hover:bg-[#ea580c] text-white font-bold tracking-wider px-6 rounded-md border-b-4 border-[#c2410c] active:border-b-0 active:mt-1 transition-all" 
+                    disabled={isSpinning || !isFreeSpinAvailable} 
+                    onClick={handleSpin}
+                  >
+                    {isFreeSpinAvailable ? "FREE SPIN" : "FREE SPIN USED"}
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="border-[#f97316]/30 text-[#f97316] hover:bg-[#f97316]/10 font-bold tracking-wider px-6 rounded-md" 
+                    disabled={isSpinning || userXP < 200 || isFreeSpinAvailable} 
+                    onClick={handleSpin}
+                  >
+                    EXTRA SPIN · 200 XP
+                  </Button>
+                </div>
+                {!isFreeSpinAvailable && userXP < 200 && <p className="text-xs text-muted-foreground mt-3">Need {200 - userXP} more XP to spin</p>}
+              </CardContent>
+            </Card>
 
           {spinHistory && spinHistory.length > 0 && (
             <Card>
