@@ -70,8 +70,21 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="flex-1 flex items-center justify-center">
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
+      {/* Background Video (Only on Login Page) */}
+      <video id="bg-video" autoPlay loop muted playsInline>
+        <source src="/bg.mp4" type="video/mp4" />
+      </video>
+      <div className="bg-overlay"></div>
+
+      {/* Dynamic Moving Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[10%] left-[10%] w-[40vw] h-[40vw] bg-primary/20 rounded-full blur-[100px] animate-pulse"></div>
+        <div className="absolute bottom-[10%] right-[10%] w-[30vw] h-[30vw] bg-destructive/20 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '2s', animationDuration: '4s' }}></div>
+        <div className="absolute top-[40%] right-[30%] w-[20vw] h-[20vw] bg-accent/20 rounded-full blur-[60px] animate-pulse" style={{ animationDelay: '1s', animationDuration: '5s' }}></div>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center relative z-10">
         <div className="flex items-center justify-center h-full flex-col w-full px-4">
         <Card className="w-full max-w-sm pb-0 border shadow-md">
           <CardHeader className="text-center">
