@@ -721,6 +721,22 @@ const schema = defineSchema(
     }).index("managerId", ["managerId"])
       .index("employeeId", ["employeeId"])
       .index("timestamp", ["timestamp"]),
+
+    // Branch Races (Location Competitions)
+    branchRaces: defineTable({
+      title: v.string(),
+      description: v.string(),
+      targetSales: v.number(),
+      reward: v.string(),
+      status: v.union(v.literal("active"), v.literal("completed")),
+      winnerBranch: v.optional(v.string()),
+      progress: v.array(v.object({
+        branch: v.string(),
+        sales: v.number(),
+      })),
+      startedAt: v.number(),
+      completedAt: v.optional(v.number()),
+    }).index("status", ["status"]),
   },
   {
     schemaValidation: false,

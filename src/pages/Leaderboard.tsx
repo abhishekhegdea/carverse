@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, Medal, TrendingUp, Users, Building2, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { BranchRaceTrack } from "@/components/dashboard/BranchRaceTrack";
 
 const PERIODS = [
   { value: "daily", label: "Daily" },
@@ -83,6 +84,8 @@ export default function Leaderboard() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
+      <BranchRaceTrack />
+
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

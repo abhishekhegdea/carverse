@@ -30,6 +30,7 @@ import type * as managerEngine from "../managerEngine.js";
 import type * as missionEngine from "../missionEngine.js";
 import type * as notifications from "../notifications.js";
 import type * as promotionEngine from "../promotionEngine.js";
+import type * as raceEngine from "../raceEngine.js";
 import type * as rewards from "../rewards.js";
 import type * as seed from "../seed.js";
 import type * as users from "../users.js";
@@ -64,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   missionEngine: typeof missionEngine;
   notifications: typeof notifications;
   promotionEngine: typeof promotionEngine;
+  raceEngine: typeof raceEngine;
   rewards: typeof rewards;
   seed: typeof seed;
   users: typeof users;

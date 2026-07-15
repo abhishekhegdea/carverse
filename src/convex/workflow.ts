@@ -6,6 +6,7 @@ import { calculateAndAwardLeadershipXP } from "./managerEngine";
 import { checkAndProcessPromotion } from "./promotionEngine";
 import { awardCoins } from "./economyEngine";
 import { updateMissionProgress } from "./missionEngine";
+import { recordBranchSale } from "./raceEngine";
 
 const STAGES = [
   "enquiry", "assigned", "contacted", "visited", "test_drive", "quotation",
@@ -222,6 +223,11 @@ export const advanceStage = authMutation({
         if (actionType === "delivered") actionType = "delivery";
         
         await updateMissionProgress(ctx, ctx.userId, actionType, 1);
+
+        // If the sale is finalized (delivered), increment the branch race
+        if (args.newStage === "delivered" && user.branch) {
+          await recordBranchSale(ctx, user.branch);
+        }
       }
     }
   },
