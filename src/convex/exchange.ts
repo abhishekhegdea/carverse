@@ -186,16 +186,18 @@ export const transferToSales = mutation({
 
     // Transfer to CRM Pipeline as a Sales Enquiry
     const saleId = await ctx.db.insert("sales", {
+      employeeId: args.executiveId,
       customerId: request.customerId,
       customerName: request.customerName,
-      customerPhone: request.phone,
-      stage: "enquiry",
-      assignedTo: args.executiveId, // Or put it in a pool
-      branchId: "HQ",
-      dealValue: request.finalValue || request.estimatedValue,
-      notes: `Exchange Transfer: ${request.brand} ${request.model}. Target: New Vehicle Purchase.`,
+      carType: "passenger", 
+      carModel: `${request.brand} ${request.model}`,
+      amount: request.finalValue || request.estimatedValue,
+      status: "enquiry",
+      hasInsurance: false,
+      hasAccessories: false,
+      hasExchange: true,
+      bookingDate: Date.now(),
       createdAt: Date.now(),
-      updatedAt: Date.now(),
     });
 
     return saleId;

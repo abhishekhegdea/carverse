@@ -195,6 +195,7 @@ export const computeLeaderboard = internalMutation({
 export const getTopRanked = authQuery({
   args: {
     periodType: v.optional(v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly"), v.literal("quarterly"), v.literal("yearly"))),
+    scope: v.optional(v.string()), // individual, branch, etc.
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -220,8 +221,10 @@ export const getTopRanked = authQuery({
       case "yearly": periodStart = new Date(today.getFullYear(), 0, 1).getTime(); break;
     }
 
+    const scope = args.scope ?? "individual";
+
     const entries = await ctx.db.query("leaderboard")
-      .withIndex("periodType_scope", (q: any) => q.eq("periodType", periodType).eq("scope", "individual"))
+      .withIndex("periodType_scope", (q: any) => q.eq("periodType", periodType).eq("scope", scope))
       .filter((q: any) => q.gte(q.field("periodStart"), periodStart))
       .order("asc")
       .take(args.limit ?? 20);
