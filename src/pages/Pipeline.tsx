@@ -20,6 +20,68 @@ const PRIMARY_STAGES = [
   { id: "ready", label: "Ready" },
 ];
 
+const NEXT_STAGE_ROLES: Record<string, string[]> = {
+  test_drive: ["sales_executive"],
+  booked: ["sales_executive"],
+  finance: ["finance_executive"],
+  registration: ["insurance_executive", "service_advisor"],
+  ready: ["service_advisor", "sales_executive"],
+  delivered: ["sales_executive"],
+};
+
+function HandOffDialog({ 
+  open, 
+  onOpenChange, 
+  saleId, 
+  nextStage, 
+  requiredRoles, 
+  onConfirm 
+}: { 
+  open: boolean, 
+  onOpenChange: (o: boolean) => void, 
+  saleId: string, 
+  nextStage: string, 
+  requiredRoles: string[],
+  onConfirm: (assigneeId: string) => void 
+}) {
+  const employees = useQuery(api.workflow.getEmployeesByRole, { roles: requiredRoles }) || [];
+  const [selected, setSelected] = useState<string>("");
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Hand-off to {nextStage.replace("_", " ").toUpperCase()}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 mt-4">
+          <p className="text-sm text-muted-foreground">Select an employee from the receiving department to assign this lead to.</p>
+          <div className="space-y-2">
+            <Label>Select Assignee</Label>
+            <Select value={selected} onValueChange={setSelected}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select employee" />
+              </SelectTrigger>
+              <SelectContent>
+                {employees.map((emp: any) => (
+                  <SelectItem key={emp._id} value={emp._id}>
+                    {emp.name} ({emp.role.replace("_", " ")})
+                  </SelectItem>
+                ))}
+                {employees.length === 0 && (
+                  <SelectItem value="none" disabled>No employees found for this department</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={() => onConfirm(selected)} disabled={!selected || selected === "none"} className="w-full">
+            Transfer & Advance
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Pipeline() {
   const pipeline = useQuery(api.workflow.getPipeline);
   const advanceStage = useMutation(api.workflow.advanceStage);
@@ -29,6 +91,13 @@ export default function Pipeline() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
+  const [handoff, setHandoff] = useState<{ open: boolean, saleId: string, nextStage: string, requiredRoles: string[] }>({
+    open: false,
+    saleId: "",
+    nextStage: "",
+    requiredRoles: [],
+  });
+
   if (pipeline === undefined) {
     return (
       <div className="flex-1 p-8 flex items-center justify-center">
@@ -37,16 +106,26 @@ export default function Pipeline() {
     );
   }
 
-  const handleAdvance = async (saleId: string, currentStage: string) => {
-    setIsAdvancing(saleId);
+  const handleAdvanceClick = (saleId: string, currentStage: string) => {
+    const currentIndex = PRIMARY_STAGES.findIndex(s => s.id === currentStage);
+    let nextStage = "delivered";
+    if (currentIndex !== -1 && currentIndex < PRIMARY_STAGES.length - 1) {
+      nextStage = PRIMARY_STAGES[currentIndex + 1].id;
+    }
+    
+    const requiredRoles = NEXT_STAGE_ROLES[nextStage] || [];
+    setHandoff({ open: true, saleId, nextStage, requiredRoles });
+  };
+
+  const executeAdvance = async (assigneeId: string) => {
+    setIsAdvancing(handoff.saleId);
+    setHandoff(prev => ({ ...prev, open: false }));
     try {
-      const currentIndex = PRIMARY_STAGES.findIndex(s => s.id === currentStage);
-      let nextStage = "delivered";
-      if (currentIndex !== -1 && currentIndex < PRIMARY_STAGES.length - 1) {
-        nextStage = PRIMARY_STAGES[currentIndex + 1].id;
-      }
-      
-      await advanceStage({ saleId: saleId as any, newStage: nextStage });
+      await advanceStage({ 
+        saleId: handoff.saleId as any, 
+        newStage: handoff.nextStage,
+        assigneeId: assigneeId as any,
+      });
     } catch (error: any) {
       console.error("Failed to advance stage:", error);
       alert(`Failed to advance stage: ${error.message}`);
@@ -176,7 +255,7 @@ export default function Pipeline() {
                           className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleAdvance(sale._id, sale.status);
+                            handleAdvanceClick(sale._id, sale.status);
                           }}
                           disabled={isAdvancing === sale._id}
                         >
@@ -216,6 +295,17 @@ export default function Pipeline() {
           </div>
         </div>
       </div>
+      
+      {handoff.open && (
+        <HandOffDialog 
+          open={handoff.open} 
+          onOpenChange={(o) => setHandoff(prev => ({ ...prev, open: o }))}
+          saleId={handoff.saleId}
+          nextStage={handoff.nextStage}
+          requiredRoles={handoff.requiredRoles}
+          onConfirm={executeAdvance}
+        />
+      )}
     </div>
   );
 }

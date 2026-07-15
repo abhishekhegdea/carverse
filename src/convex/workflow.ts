@@ -176,6 +176,7 @@ export const advanceStage = authMutation({
     saleId: v.id("sales"),
     newStage: v.string(),
     comments: v.optional(v.string()),
+    assigneeId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
     if (!ctx.userId) throw new Error("Unauthorized");
@@ -185,10 +186,13 @@ export const advanceStage = authMutation({
 
     const previousStage = sale.status;
 
-    // Update Status
-    await ctx.db.patch(args.saleId, {
-      status: args.newStage as any,
-    });
+    // Update Status & Ownership if transferred
+    const patchData: any = { status: args.newStage };
+    if (args.assigneeId) {
+      patchData.employeeId = args.assigneeId;
+    }
+
+    await ctx.db.patch(args.saleId, patchData);
 
     // Log History
     await ctx.db.insert("workflowHistory", {
@@ -217,4 +221,23 @@ export const advanceStage = authMutation({
       await distributeHierarchyXP(ctx, ctx.userId, xp, `Stage: ${args.newStage}`);
     }
   },
+});
+
+export const getEmployeesByRole = authQuery({
+  args: {
+    roles: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    if (!ctx.userId) return [];
+    
+    // Fetch all users matching the roles
+    const users = await ctx.db.query("users").collect();
+    return users.filter(u => u.role && args.roles.includes(u.role)).map(u => ({
+      _id: u._id,
+      name: u.name,
+      role: u.role,
+      branch: u.branch,
+      level: u.level,
+    }));
+  }
 });
