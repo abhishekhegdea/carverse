@@ -23,6 +23,7 @@ const Notifications = lazy(() => import("./pages/Notifications.tsx"));
 const Admin = lazy(() => import("./pages/Admin.tsx"));
 const Catalog = lazy(() => import("./pages/Catalog.tsx"));
 const Exchange = lazy(() => import("./pages/Exchange.tsx"));
+const ExchangeDashboard = lazy(() => import("./pages/ExchangeDashboard.tsx"));
 const Manager = lazy(() => import("./pages/Manager.tsx"));
 const Analytics = lazy(() => import("./pages/Analytics.tsx"));
 
@@ -149,6 +150,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/hierarchy" element={<Hierarchy />} />
                 <Route path="/social" element={<Social />} />
                 <Route path="/pipeline" element={<Pipeline />} />
+                <Route path="/exchange-dashboard" element={<ExchangeDashboard />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/admin" element={<Admin />} />

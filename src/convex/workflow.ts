@@ -1,6 +1,10 @@
 import { v } from "convex/values";
 import { authQuery, authMutation } from "./customAuth";
 import { Id } from "./_generated/dataModel";
+import { calculateMathematicalXP } from "./gameEngine";
+import { calculateAndAwardLeadershipXP } from "./managerEngine";
+import { checkAndProcessPromotion } from "./promotionEngine";
+import { awardCoins } from "./economyEngine";
 
 const STAGES = [
   "enquiry", "assigned", "contacted", "visited", "test_drive", "quotation",
@@ -20,51 +24,7 @@ const XP_AWARDS: Record<string, number> = {
   "insurance": 50,
 };
 
-// Recursive passive hierarchy XP function
-async function distributeHierarchyXP(ctx: any, sourceUserId: Id<"users">, baseXP: number, eventType: string) {
-  let currentUser = await ctx.db.get(sourceUserId);
-  if (!currentUser || !currentUser.managerId) return;
-
-  const hierarchyDistribution = [0.24, 0.16, 0.12, 0.08, 0.04]; // Approx: 60, 40, 30, 20, 10 from 250
-  
-  let currentManagerId = currentUser.managerId;
-  let level = 0;
-  
-  while (currentManagerId && level < hierarchyDistribution.length) {
-    const manager = await ctx.db.get(currentManagerId);
-    if (!manager) break;
-
-    const passiveXP = Math.round(baseXP * hierarchyDistribution[level]);
-    if (passiveXP > 0) {
-      await ctx.db.insert("hierarchyRewards", {
-        sourceEmployeeId: sourceUserId,
-        targetEmployeeId: manager._id,
-        eventType,
-        sourceXP: baseXP,
-        hierarchyXP: passiveXP,
-        hierarchyLevel: level + 1,
-        timestamp: Date.now(),
-      });
-
-      // Update manager's totalXP
-      const managerBalance = (manager.totalXP || 0) + passiveXP;
-      await ctx.db.patch(manager._id, { totalXP: managerBalance });
-
-      // Log transaction
-      await ctx.db.insert("xpTransactions", {
-        employeeId: manager._id,
-        amount: passiveXP,
-        eventType: `Passive XP (${eventType})`,
-        description: `Team Performance Bonus from ${currentUser.name}`,
-        balance: managerBalance,
-        timestamp: Date.now(),
-      });
-    }
-
-    currentManagerId = manager.managerId;
-    level++;
-  }
-}
+// Removed old passive hierarchy function in favor of Leadership XP calculation.
 
 export const getPipeline = authQuery({
   args: {},
@@ -150,21 +110,26 @@ export const createEnquiry = authMutation({
       timestamp: Date.now(),
     });
 
-    // 4. Award XP (only if a real user submitted it, reception desk doesn't need to earn XP, but we can award it anyway)
+    // 4. Award XP using the new Mathematical Game Engine
     const user = await ctx.db.get(assigneeId);
-    const xp = XP_AWARDS["enquiry"];
-    if (user && xp) {
-      const balance = (user.totalXP || 0) + xp;
-      await ctx.db.patch(assigneeId, { totalXP: balance });
-      await ctx.db.insert("xpTransactions", {
+    const xpBase = XP_AWARDS["enquiry"] || 5;
+    if (user && xpBase) {
+      const earnedXP = await calculateMathematicalXP(ctx, {
         employeeId: assigneeId,
-        amount: xp,
-        eventType: "Enquiry Created",
-        description: `New lead: ${args.customerName}`,
-        balance,
-        timestamp: Date.now(),
+        saleId,
+        actionType: "Enquiry Created",
+        baseValue: xpBase,
+        difficultyMultiplier: 1.0,
       });
-      await distributeHierarchyXP(ctx, assigneeId, xp, "Enquiry Created");
+
+      if (earnedXP > 0) {
+        // Enquiries might earn a small coin reward
+        await awardCoins(ctx, {
+          employeeId: assigneeId,
+          amount: 5,
+          reason: "Enquiry Captured",
+        });
+      }
     }
 
     return saleId;
@@ -204,21 +169,51 @@ export const advanceStage = authMutation({
       timestamp: Date.now(),
     });
 
-    // Award XP
+    // Award XP using Game Engine
     const user = await ctx.db.get(ctx.userId);
-    const xp = XP_AWARDS[args.newStage] || 10; // Default 10 XP for moving workflow
-    if (user && xp) {
-      const balance = (user.totalXP || 0) + xp;
-      await ctx.db.patch(ctx.userId, { totalXP: balance });
-      await ctx.db.insert("xpTransactions", {
+    const xpBase = XP_AWARDS[args.newStage] || 10;
+    
+    if (user && xpBase) {
+      // Pass difficulty or CSAT from sale record if it exists
+      const earnedXP = await calculateMathematicalXP(ctx, {
         employeeId: ctx.userId,
-        amount: xp,
-        eventType: `Stage: ${args.newStage}`,
-        description: `Advanced to ${args.newStage}`,
-        balance,
-        timestamp: Date.now(),
+        saleId: args.saleId,
+        actionType: `Stage: ${args.newStage}`,
+        baseValue: xpBase,
+        difficultyMultiplier: sale.difficultyMultiplier || 1.0,
+        timeEfficiency: sale.timeEfficiency || 1.0,
+        csatScore: sale.csatScore,
+        qualityScore: sale.qualityScore,
       });
-      await distributeHierarchyXP(ctx, ctx.userId, xp, `Stage: ${args.newStage}`);
+
+      // If XP was awarded (anti-gaming logic passed)
+      if (earnedXP > 0) {
+        // Award Coins for completing a quest milestone
+        const coinReward = Math.round(xpBase / 2); // E.g., 50 coins for 100 base XP
+        await awardCoins(ctx, {
+          employeeId: ctx.userId,
+          amount: coinReward,
+          reason: `Milestone reached: ${args.newStage}`,
+        });
+
+        // Award Leadership XP to manager (if any)
+        if (user.managerId) {
+          // Simplification: We assume team average score is somehow derived from baseXP or we just pass baseXP
+          await calculateAndAwardLeadershipXP(ctx, {
+            managerId: user.managerId,
+            teamAverageScore: xpBase,
+            mentorshipMultiplier: 1.1,
+            completionPercentage: 1.0, 
+          });
+        }
+
+        // Check for promotion after this milestone
+        await checkAndProcessPromotion(ctx, {
+          employeeId: ctx.userId,
+          averageCsatScore: sale.csatScore || 5.0, // simplified
+          questCompletionPercentage: 1.0,
+        });
+      }
     }
   },
 });

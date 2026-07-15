@@ -151,9 +151,15 @@ const schema = defineSchema(
       state: v.optional(v.string()),
       managerId: v.optional(v.id("users")),
       totalXP: v.optional(v.number()),
+      coins: v.optional(v.number()),
       level: v.optional(v.number()),
       rank: v.optional(v.string()),
       badgeIds: v.optional(v.array(v.string())),
+      streak: v.optional(v.number()),
+      freezeCards: v.optional(v.number()),
+      reputation: v.optional(v.number()),
+      promotionScore: v.optional(v.number()),
+      leadershipScore: v.optional(v.number()),
       createdAt: v.optional(v.number()),
     }).index("email", ["email"])
       .index("role", ["role"])
@@ -168,6 +174,8 @@ const schema = defineSchema(
       state: v.string(),
       region: v.string(),
       zone: v.string(),
+      footfall: v.optional(v.number()),
+      averageFootfall: v.optional(v.number()),
       branches: v.array(v.string()),
     }).index("name", ["name"]),
 
@@ -397,6 +405,10 @@ const schema = defineSchema(
       bookingDate: v.number(),
       deliveryDate: v.optional(v.number()),
       expectedCompletionDate: v.optional(v.number()),
+      difficultyMultiplier: v.optional(v.number()),
+      timeEfficiency: v.optional(v.number()),
+      csatScore: v.optional(v.number()),
+      qualityScore: v.optional(v.number()),
       createdAt: v.number(),
     }).index("employeeId", ["employeeId"])
       .index("status", ["status"])
@@ -424,7 +436,16 @@ const schema = defineSchema(
     }).index("saleId", ["saleId"])
       .index("timestamp", ["timestamp"]),
 
-    // Vehicles Catalog
+    // Vehicles Catalog / Master
+    vehicleMaster: defineTable({
+      brand: v.string(),
+      model: v.string(),
+      variant: v.string(),
+      launchPrice: v.number(),
+      currentAvgMarketPrice: v.number(),
+    }).index("brand", ["brand"])
+      .index("brand_model", ["brand", "model"]),
+
     vehicles: defineTable({
       brand: v.string(),
       model: v.string(),
@@ -453,22 +474,67 @@ const schema = defineSchema(
       type: v.string(), // exterior, interior, 360
     }).index("vehicleId", ["vehicleId"]),
 
-    // Exchange / Trade-in Requests
+    // Exchange / Trade-in Requests (Rule-Based Gamified Engine)
     exchangeRequests: defineTable({
       customerId: v.optional(v.id("customers")),
       customerName: v.string(),
       phone: v.string(),
       brand: v.string(),
       model: v.string(),
-      year: v.number(),
+      variant: v.string(),
+      manufacturingYear: v.number(),
+      registrationYear: v.number(),
+      fuelType: v.string(),
+      transmission: v.string(),
       kilometers: v.number(),
-      conditionScore: v.optional(v.number()),
-      estimatedValue: v.optional(v.number()),
+      ownerCount: v.number(),
+      insuranceValidity: v.string(),
+      accidentHistory: v.string(),
+      serviceHistory: v.string(),
+      rcAvailable: v.boolean(),
+      loanPending: v.boolean(),
+      city: v.string(),
+      vehicleCondition: v.string(),
+      tyreCondition: v.string(),
+      batteryCondition: v.optional(v.string()), // For EV
+      expectedPrice: v.optional(v.number()),
+      comments: v.optional(v.string()),
+
+      // Calculated Values
+      basePrice: v.number(),
+      estimatedValue: v.number(),
+      priceRangeMin: v.number(),
+      priceRangeMax: v.number(),
+
+      // Status & Inspection
+      status: v.union(v.literal("pending"), v.literal("inspected"), v.literal("approved"), v.literal("rejected")),
       finalValue: v.optional(v.number()),
-      status: v.union(v.literal("pending"), v.literal("evaluated"), v.literal("approved"), v.literal("rejected")),
       images: v.array(v.string()), // Cloudinary URLs
       createdAt: v.number(),
     }).index("status", ["status"]),
+
+    valuationHistory: defineTable({
+      exchangeRequestId: v.id("exchangeRequests"),
+      breakdown: v.array(v.object({
+        step: v.string(),
+        percentage: v.number(),
+        absoluteValue: v.number(),
+        description: v.string(),
+      })),
+      timestamp: v.number(),
+    }).index("exchangeRequestId", ["exchangeRequestId"]),
+
+    inspectionReports: defineTable({
+      exchangeRequestId: v.id("exchangeRequests"),
+      executiveId: v.id("users"),
+      finalPrice: v.number(),
+      reasonForDifference: v.string(),
+      inspectionNotes: v.string(),
+      images: v.array(v.string()),
+      inspectionDate: v.number(),
+    }).index("exchangeRequestId", ["exchangeRequestId"])
+      .index("executiveId", ["executiveId"]),
+
 
     // Locations
     locations: defineTable({
@@ -535,6 +601,52 @@ const schema = defineSchema(
       timestamp: v.number(),
     }).index("targetEmployeeId", ["targetEmployeeId"])
       .index("sourceEmployeeId", ["sourceEmployeeId"])
+      .index("timestamp", ["timestamp"]),
+
+    // Anti-Gaming Logs
+    antiGamingLogs: defineTable({
+      employeeId: v.id("users"),
+      saleId: v.optional(v.id("sales")),
+      actionType: v.string(),
+      timestamp: v.number(),
+    }).index("employeeId", ["employeeId"])
+      .index("saleId", ["saleId"]),
+
+    // Team Battles
+    teamBattles: defineTable({
+      periodType: v.string(), // "weekly"
+      departmentA: v.string(),
+      departmentB: v.string(),
+      scoreA: v.number(),
+      scoreB: v.number(),
+      status: v.union(v.literal("active"), v.literal("completed")),
+      periodStart: v.number(),
+      periodEnd: v.number(),
+      winner: v.optional(v.string()),
+    }).index("status", ["status"]),
+
+    // Boss Battles
+    bossBattles: defineTable({
+      title: v.string(),
+      description: v.string(),
+      department: v.string(),
+      target: v.number(),
+      currentProgress: v.number(),
+      status: v.union(v.literal("active"), v.literal("completed"), v.literal("failed")),
+      periodStart: v.number(),
+      periodEnd: v.number(),
+    }).index("status", ["status"])
+      .index("department", ["department"]),
+
+    // Recognition XP Approvals
+    recognitionXP: defineTable({
+      managerId: v.id("users"),
+      employeeId: v.id("users"),
+      reason: v.string(),
+      amount: v.number(),
+      timestamp: v.number(),
+    }).index("managerId", ["managerId"])
+      .index("employeeId", ["employeeId"])
       .index("timestamp", ["timestamp"]),
   },
   {

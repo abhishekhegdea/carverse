@@ -1,0 +1,1 @@
+import{u}from"./use-auth-B53dM3Ck.js";import{u as e,a as i}from"./index-CusSwErm.js";function c(o,s={}){const{token:t}=u();return e(o,s==="skip"?"skip":{...s,sessionId:t??void 0})}function m(o){const{token:s}=u(),t=i(o);return(n={})=>t({...n,sessionId:s??void 0})}export{c as a,m as u};

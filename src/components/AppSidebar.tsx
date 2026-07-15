@@ -47,6 +47,10 @@ const adminItems = [
   { label: "Admin Panel", icon: Shield, path: "/admin" },
 ];
 
+const managerItems = [
+  { label: "Exchange Approvals", icon: GitMerge, path: "/exchange-dashboard" },
+];
+
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -106,6 +110,25 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {isAdmin && adminItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          onClick={() => navigate(item.path)}
+                          isActive={isActive}
+                          tooltip={item.label}
+                          className={cn(
+                            "group relative overflow-hidden rounded-xl transition-all duration-300 hover:bg-white/5",
+                            isActive && "bg-primary/10 text-primary font-medium border border-primary/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.2)] shadow-primary/10"
+                          )}
+                        >
+                          <item.icon className="h-4 w-4 shrink-0" />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                  {isManager && managerItems.map((item) => {
                     const isActive = location.pathname === item.path;
                     return (
                       <SidebarMenuItem key={item.path}>

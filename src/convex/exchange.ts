@@ -1,20 +1,34 @@
 import { v } from "convex/values";
-import { mutation, action } from "./_generated/server";
-import { api } from "./_generated/api";
+import { mutation, query } from "./_generated/server";
+import { calculateRuleBasedValuation } from "./exchangeEngine";
 
-// 1. Mutation to create the request in DB
-export const submitExchangeRequest = mutation({
+// 1. Submit and Evaluate (All in one deterministic mutation)
+export const submitAndEvaluateExchange = mutation({
   args: {
     customerName: v.string(),
     phone: v.string(),
     brand: v.string(),
     model: v.string(),
-    year: v.number(),
+    variant: v.string(),
+    manufacturingYear: v.number(),
+    registrationYear: v.number(),
+    fuelType: v.string(),
+    transmission: v.string(),
     kilometers: v.number(),
-    images: v.array(v.string()), // Simulated Cloudinary URLs
+    ownerCount: v.number(),
+    insuranceValidity: v.string(),
+    accidentHistory: v.string(),
+    serviceHistory: v.string(),
+    rcAvailable: v.boolean(),
+    loanPending: v.boolean(),
+    city: v.string(),
+    vehicleCondition: v.string(),
+    tyreCondition: v.string(),
+    batteryCondition: v.optional(v.string()),
+    images: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    // Check if customer exists or create them
+    // 1. Check or Create Customer
     const existingCustomer = await ctx.db
       .query("customers")
       .withIndex("phone", (q) => q.eq("phone", args.phone))
@@ -29,101 +43,161 @@ export const submitExchangeRequest = mutation({
       });
     }
 
-    // Insert exchange request
+    // 2. Determine Base Price from Master Data
+    // We will attempt to find the exact match, otherwise use a fallback mock based on brand
+    let basePrice = 500000; // default 5 Lakh fallback
+    
+    const masterVehicle = await ctx.db
+      .query("vehicleMaster")
+      .withIndex("brand_model", (q) => q.eq("brand", args.brand).eq("model", args.model))
+      .filter((q) => q.eq(q.field("variant"), args.variant))
+      .first();
+
+    if (masterVehicle) {
+      basePrice = masterVehicle.currentAvgMarketPrice || masterVehicle.launchPrice;
+    } else {
+      // Mocked logic for fallback if vehicle_master isn't seeded yet
+      if (args.brand.toLowerCase() === "maruti") basePrice = 600000;
+      else if (args.brand.toLowerCase() === "hyundai") basePrice = 800000;
+      else if (args.brand.toLowerCase() === "honda") basePrice = 1000000;
+      else if (args.brand.toLowerCase() === "toyota") basePrice = 1500000;
+      else if (args.brand.toLowerCase() === "bmw") basePrice = 4000000;
+    }
+
+    // 3. Rule-Based Mathematical Evaluation
+    const valuation = calculateRuleBasedValuation(
+      basePrice,
+      args.manufacturingYear,
+      args.kilometers,
+      args.ownerCount,
+      args.insuranceValidity,
+      args.serviceHistory,
+      args.accidentHistory,
+      args.vehicleCondition,
+      args.tyreCondition
+    );
+
+    // 4. Save to Exchange Requests
     const exchangeId = await ctx.db.insert("exchangeRequests", {
       customerId,
       customerName: args.customerName,
       phone: args.phone,
       brand: args.brand,
       model: args.model,
-      year: args.year,
+      variant: args.variant,
+      manufacturingYear: args.manufacturingYear,
+      registrationYear: args.registrationYear,
+      fuelType: args.fuelType,
+      transmission: args.transmission,
       kilometers: args.kilometers,
+      ownerCount: args.ownerCount,
+      insuranceValidity: args.insuranceValidity,
+      accidentHistory: args.accidentHistory,
+      serviceHistory: args.serviceHistory,
+      rcAvailable: args.rcAvailable,
+      loanPending: args.loanPending,
+      city: args.city,
+      vehicleCondition: args.vehicleCondition,
+      tyreCondition: args.tyreCondition,
+      batteryCondition: args.batteryCondition,
+      
+      basePrice: valuation.basePrice,
+      estimatedValue: valuation.estimatedValue,
+      priceRangeMin: valuation.priceRangeMin,
+      priceRangeMax: valuation.priceRangeMax,
+      
       status: "pending",
       images: args.images,
       createdAt: Date.now(),
     });
 
-    return exchangeId;
+    // 5. Save Valuation History Breakdown
+    await ctx.db.insert("valuationHistory", {
+      exchangeRequestId: exchangeId,
+      breakdown: valuation.breakdown,
+      timestamp: Date.now(),
+    });
+
+    return {
+      exchangeId,
+      valuation
+    };
   },
 });
 
-// 2. Action to call your Real Python ML Server
-export const evaluateExchangeML = action({
-  args: {
-    exchangeId: v.id("exchangeRequests"),
-    brand: v.string(),
-    year: v.number(),
-    kilometers: v.number(),
-  },
-  handler: async (ctx, args) => {
-
-    // =========================================================================
-    // 🔌 ML INTEGRATION INSTRUCTIONS
-    // =========================================================================
-    // 1. Run your Python ML server locally (e.g., on port 8000)
-    // 2. Expose it to the internet using Ngrok: `ngrok http 8000`
-    // 3. Paste the generated Ngrok URL below (replace 'https://YOUR_NGROK_URL.ngrok-free.app')
-
-    const ML_SERVER_URL = "https://provable-underuse-haiku.ngrok-free.dev";
-
-    let estimatedValue = 0;
-    let conditionScore = 0;
-
-    try {
-      // 🚀 Make the request to your Python server!
-      const response = await fetch(ML_SERVER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brand: args.brand,
-          year: args.year,
-          kilometers: args.kilometers,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`ML Server returned ${response.status}`);
-      }
-
-      const mlResult = await response.json();
-
-      // We expect your Python server to return JSON like:
-      // { "estimatedValue": 850000, "conditionScore": 88 }
-      estimatedValue = mlResult.estimatedValue;
-      conditionScore = mlResult.conditionScore;
-
-    } catch (error) {
-      console.warn("ML Server not reachable or failed. Using fallback mock data.", error);
-
-      // Fallback logic if your server is offline
-      const baseValue = 1000000;
-      estimatedValue = Math.max(50000, Math.round(baseValue - ((new Date().getFullYear() - args.year) * 0.1 * baseValue) - ((args.kilometers / 10000) * 0.05 * baseValue)));
-      conditionScore = Math.floor(Math.random() * (95 - 65 + 1)) + 65;
-      estimatedValue = estimatedValue * (conditionScore / 100);
-    }
-
-    // Update the DB with the results
-    await ctx.runMutation(api.exchange.updateExchangeEvaluation, {
-      exchangeId: args.exchangeId,
-      estimatedValue,
-      conditionScore,
-    });
-
-    return { estimatedValue, conditionScore };
+export const getExchangeRequests = query({
+  args: {},
+  handler: async (ctx) => {
+    // Return all requests sorted by latest
+    const requests = await ctx.db.query("exchangeRequests").order("desc").collect();
+    return requests;
   },
 });
 
-export const updateExchangeEvaluation = mutation({
+export const getValuationHistory = query({
+  args: { exchangeId: v.id("exchangeRequests") },
+  handler: async (ctx, args) => {
+    return await ctx.db.query("valuationHistory")
+      .withIndex("exchangeRequestId", q => q.eq("exchangeRequestId", args.exchangeId))
+      .first();
+  },
+});
+
+export const submitInspectionReport = mutation({
   args: {
-    exchangeId: v.id("exchangeRequests"),
-    estimatedValue: v.number(),
-    conditionScore: v.number(),
+    exchangeRequestId: v.id("exchangeRequests"),
+    executiveId: v.id("users"),
+    finalPrice: v.number(),
+    reasonForDifference: v.string(),
+    inspectionNotes: v.string(),
+    images: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.exchangeId, {
-      status: "evaluated",
-      estimatedValue: args.estimatedValue,
-      conditionScore: args.conditionScore,
+    await ctx.db.patch(args.exchangeRequestId, {
+      status: "inspected",
+      finalValue: args.finalPrice,
     });
+
+    await ctx.db.insert("inspectionReports", {
+      exchangeRequestId: args.exchangeRequestId,
+      executiveId: args.executiveId,
+      finalPrice: args.finalPrice,
+      reasonForDifference: args.reasonForDifference,
+      inspectionNotes: args.inspectionNotes,
+      images: args.images,
+      inspectionDate: Date.now(),
+    });
+    
+    return true;
+  },
+});
+
+export const transferToSales = mutation({
+  args: {
+    exchangeRequestId: v.id("exchangeRequests"),
+    executiveId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const request = await ctx.db.get(args.exchangeRequestId);
+    if (!request || !request.customerId) throw new Error("Request not found or no customer linked.");
+
+    // Update status in exchange
+    await ctx.db.patch(args.exchangeRequestId, { status: "approved" });
+
+    // Transfer to CRM Pipeline as a Sales Enquiry
+    const saleId = await ctx.db.insert("sales", {
+      customerId: request.customerId,
+      customerName: request.customerName,
+      customerPhone: request.phone,
+      stage: "enquiry",
+      assignedTo: args.executiveId, // Or put it in a pool
+      branchId: "HQ",
+      dealValue: request.finalValue || request.estimatedValue,
+      notes: `Exchange Transfer: ${request.brand} ${request.model}. Target: New Vehicle Purchase.`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return saleId;
   },
 });
