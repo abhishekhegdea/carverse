@@ -18,6 +18,7 @@ import type * as challenges from "../challenges.js";
 import type * as cron from "../cron.js";
 import type * as customAuth from "../customAuth.js";
 import type * as dataset from "../dataset.js";
+import type * as delegation from "../delegation.js";
 import type * as exchange from "../exchange.js";
 import type * as gamification from "../gamification.js";
 import type * as http from "../http.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   cron: typeof cron;
   customAuth: typeof customAuth;
   dataset: typeof dataset;
+  delegation: typeof delegation;
   exchange: typeof exchange;
   gamification: typeof gamification;
   http: typeof http;

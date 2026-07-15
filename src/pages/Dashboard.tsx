@@ -21,7 +21,7 @@ function StatCard({ icon: Icon, label, value, sub, trend, className }: {
   icon: any; label: string; value: string | number; sub?: string; trend?: "up" | "down"; className?: string;
 }) {
   return (
-    <Card className="card-hover">
+    <Card className="glass-card">
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
@@ -55,7 +55,8 @@ function XPProgressBar({ currentXP, level, rank, nextLevelXP, progress }: {
   currentXP: number; level: number; rank: string; nextLevelXP: number; progress: number;
 }) {
   return (
-    <Card className="overflow-hidden border-0 bg-gradient-to-r from-primary/5 via-primary/3 to-transparent">
+    <Card className="overflow-hidden glass-panel border-white/10 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent relative">
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent opacity-50 pointer-events-none" />
       <CardContent className="p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
@@ -75,8 +76,8 @@ function XPProgressBar({ currentXP, level, rank, nextLevelXP, progress }: {
             <p className="text-xs text-muted-foreground">/ {nextLevelXP.toLocaleString()} XP</p>
           </div>
         </div>
-        <div className="relative">
-          <Progress value={progress} className="h-2.5 bg-secondary" />
+        <div className="relative z-10">
+          <Progress value={progress} className="h-3 bg-secondary/50 rounded-full overflow-hidden border border-white/5" />
           <div className="mt-2 flex justify-between text-xs text-muted-foreground">
             <span>{Math.round(progress)}% to next level</span>
             <span>{nextLevelXP - currentXP} XP remaining</span>
@@ -186,7 +187,7 @@ export default function Dashboard() {
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Missions & Challenges */}
-            <Card className="lg:col-span-2">
+            <Card className="lg:col-span-2 glass-card">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -232,7 +233,7 @@ export default function Dashboard() {
             {/* Leaderboard Preview + Activity */}
             <div className="space-y-6">
               {/* Top Rankings */}
-              <Card>
+              <Card className="glass-card">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
@@ -278,7 +279,7 @@ export default function Dashboard() {
               )}
 
               {/* Recent Activity */}
-              <Card>
+              <Card className="glass-card">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Activity</CardTitle>
                 </CardHeader>
@@ -305,7 +306,7 @@ export default function Dashboard() {
 
           {/* Badges */}
           {userProgress.badges && userProgress.badges.length > 0 && (
-            <Card>
+            <Card className="glass-card">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Gift className="h-4 w-4 text-amber-500" />

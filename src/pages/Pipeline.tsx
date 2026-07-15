@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, ArrowRight, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 // For demo purposes, we limit to the primary stages
 const PRIMARY_STAGES = [
@@ -156,13 +157,13 @@ export default function Pipeline() {
   };
 
   return (
-    <div className="flex-1 p-8 overflow-x-auto bg-muted/20">
-      <div className="flex justify-between items-center mb-6">
+    <div className="flex-1 p-8 overflow-x-auto relative">
+      <div className="flex justify-between items-center mb-6 relative z-10">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Sales Pipeline</h1>
           <p className="text-muted-foreground mt-1">Manage leads from enquiry to delivery</p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
+        <Button onClick={() => setIsDialogOpen(true)} className="shadow-lg shadow-primary/20">
           <Plus className="h-4 w-4 mr-2" />
           New Enquiry
         </Button>
@@ -212,68 +213,79 @@ export default function Pipeline() {
         </Dialog>
       </div>
 
-      <div className="flex gap-4 h-[calc(100vh-180px)] pb-4">
+      <div className="flex gap-4 h-[calc(100vh-180px)] pb-4 relative z-10">
         {PRIMARY_STAGES.map((stage) => {
           const columnSales = pipeline.filter((s: any) => s.status === stage.id);
           
           return (
-            <div key={stage.id} className="flex flex-col min-w-[300px] max-w-[300px] bg-muted/50 rounded-lg p-3 border">
+            <div key={stage.id} className="flex flex-col min-w-[300px] max-w-[300px] glass-panel rounded-xl p-3 border-border/50">
               <div className="flex items-center justify-between mb-3 px-1">
                 <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
                   {stage.label}
                 </h3>
-                <Badge variant="secondary" className="rounded-full">
+                <Badge variant="secondary" className="rounded-full bg-primary/10 text-primary border border-primary/20">
                   {columnSales.length}
                 </Badge>
               </div>
 
               <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                {columnSales.map((sale: any) => (
-                  <Card key={sale._id} className="cursor-pointer hover:border-primary/50 transition-colors shadow-sm">
-                    <CardHeader className="p-4 pb-2">
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-base font-semibold">
-                          {sale.customerName || "Customer"}
-                        </CardTitle>
-                        <Badge variant="outline" className="text-xs font-mono">
-                          ₹{(sale.amount / 100000).toFixed(1)}L
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground font-medium">
-                        {sale.carModel} ({sale.carType})
-                      </p>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      <div className="flex items-center justify-between mt-4">
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(sale.bookingDate).toLocaleDateString()}
-                        </span>
-                        
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAdvanceClick(sale._id, sale.status);
-                          }}
-                          disabled={isAdvancing === sale._id}
-                        >
-                          {isAdvancing === sale._id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <>
-                              Advance <ArrowRight className="h-3 w-3 ml-1" />
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                <AnimatePresence>
+                  {columnSales.map((sale: any) => (
+                    <motion.div
+                      key={sale._id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Card className="cursor-pointer glass-card">
+                        <CardHeader className="p-4 pb-2">
+                          <div className="flex justify-between items-start">
+                            <CardTitle className="text-base font-semibold">
+                              {sale.customerName || "Customer"}
+                            </CardTitle>
+                            <Badge variant="outline" className="text-xs font-mono border-primary/30 text-primary">
+                              ₹{(sale.amount / 100000).toFixed(1)}L
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground font-medium">
+                            {sale.carModel} ({sale.carType})
+                          </p>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-0">
+                          <div className="flex items-center justify-between mt-4">
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(sale.bookingDate).toLocaleDateString()}
+                            </span>
+                            
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/20"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAdvanceClick(sale._id, sale.status);
+                              }}
+                              disabled={isAdvancing === sale._id}
+                            >
+                              {isAdvancing === sale._id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  Advance <ArrowRight className="h-3 w-3 ml-1" />
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
                 
                 {columnSales.length === 0 && (
-                  <div className="h-24 border-2 border-dashed rounded-lg border-muted-foreground/20 flex items-center justify-center text-xs text-muted-foreground">
+                  <div className="h-24 border-2 border-dashed rounded-xl border-muted-foreground/20 flex items-center justify-center text-xs text-muted-foreground">
                     No leads in this stage
                   </div>
                 )}
@@ -283,7 +295,7 @@ export default function Pipeline() {
         })}
 
         {/* Delivered (Success) Column */}
-        <div className="flex flex-col min-w-[300px] max-w-[300px] bg-green-500/5 rounded-lg p-3 border border-green-500/20">
+        <div className="flex flex-col min-w-[300px] max-w-[300px] glass-panel rounded-xl p-3 border-emerald-500/20 bg-emerald-500/5">
           <div className="flex items-center justify-between mb-3 px-1">
             <h3 className="font-semibold text-sm uppercase tracking-wider text-green-600 dark:text-green-400">
               Delivered

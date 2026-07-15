@@ -57,14 +57,14 @@ export function AppSidebar() {
   const isManager = isAdmin || user?.role === "branch_manager" || user?.role === "sales_manager" || user?.role === "team_leader";
 
   return (
-    <Sidebar collapsible="icon" variant="floating" className="border-r border-border/40">
+    <Sidebar collapsible="icon" variant="floating" className="glass-panel border-none shadow-2xl m-3 rounded-2xl overflow-hidden backdrop-blur-3xl bg-background/40">
       <SidebarHeader className="flex items-center gap-2 px-4 py-3">
         <div
           className="flex items-center gap-3 cursor-pointer group"
           onClick={() => navigate("/dashboard")}
         >
           <img src={logo} alt="Carverse" className="h-8 w-8 rounded-md" />
-          <span className="font-semibold text-sm tracking-tight group-hover:opacity-80 transition-opacity">
+          <span className="font-bold text-lg tracking-tight group-hover:opacity-80 transition-opacity text-gradient">
             Carverse
           </span>
         </div>
@@ -84,8 +84,8 @@ export function AppSidebar() {
                       isActive={isActive}
                       tooltip={item.label}
                       className={cn(
-                        "group relative",
-                        isActive && "bg-accent font-medium"
+                        "group relative overflow-hidden rounded-xl transition-all duration-300 hover:bg-white/5",
+                        isActive && "bg-primary/10 text-primary font-medium border border-primary/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.2)] shadow-primary/10"
                       )}
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
@@ -114,8 +114,8 @@ export function AppSidebar() {
                           isActive={isActive}
                           tooltip={item.label}
                           className={cn(
-                            "group relative",
-                            isActive && "bg-accent font-medium"
+                            "group relative overflow-hidden rounded-xl transition-all duration-300 hover:bg-white/5",
+                            isActive && "bg-primary/10 text-primary font-medium border border-primary/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.2)] shadow-primary/10"
                           )}
                         >
                           <item.icon className="h-4 w-4 shrink-0" />

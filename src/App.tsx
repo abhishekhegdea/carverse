@@ -37,11 +37,11 @@ export default function AppLayout() {
   }
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full overflow-hidden bg-background">
+      <div className="flex h-screen w-full overflow-hidden bg-background ambient-bg">
         <AppSidebar />
-        <SidebarInset className="flex-1 overflow-hidden">
+        <SidebarInset className="flex-1 overflow-hidden bg-transparent">
           <AppHeader onToggleTheme={toggleTheme} isDark={isDark} />
-          <main className="flex-1 overflow-y-auto p-6 pt-4">
+          <main className="flex-1 overflow-y-auto p-6 pt-4 relative z-10">
             <Outlet />
           </main>
         </SidebarInset>

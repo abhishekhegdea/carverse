@@ -7,7 +7,25 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Car, Loader2, Gauge, Settings2, ShieldCheck, Tag, Info, Fuel, Calendar, MapPin } from "lucide-react";
+import { Car, Loader2, Gauge, Settings2, ShieldCheck, Tag, Info, Fuel, Calendar, MapPin, ChevronRight } from "lucide-react";
+import { motion } from "framer-motion";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 30, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { type: "spring", stiffness: 300, damping: 24 }
+  }
+};
 export default function Catalog() {
   const vehicles = useQuery(api.catalog.getVehicles, {});
   const createEnquiry = useMutation(api.workflow.createEnquiry);
@@ -63,43 +81,59 @@ export default function Catalog() {
       <div className="max-w-7xl mx-auto">
         
         {/* Header */}
-        <div className="mb-12 text-center">
-          <Badge variant="outline" className="mb-4 text-amber-500 border-amber-500/30 bg-amber-500/5">
-            <Car className="h-3 w-3 mr-2" />
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-12 text-center"
+        >
+          <Badge variant="outline" className="mb-4 text-primary border-primary/30 bg-primary/5 px-4 py-1.5 rounded-full">
+            <Car className="h-4 w-4 mr-2" />
             Vehicle Catalog
           </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
-            Find Your Perfect <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Drive</span>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
+            Find Your Perfect <span className="text-gradient">Drive</span>
           </h1>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">
             Browse our premium selection of vehicles, explore specifications, and schedule a test drive today.
           </p>
-        </div>
+        </motion.div>
 
         {/* Filters */}
-        <div className="flex items-center gap-4 mb-8 pb-4 border-b overflow-x-auto">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="flex items-center gap-4 mb-8 pb-4 overflow-x-auto"
+        >
           {["All Models", "SUVs", "Sedans", "Electric", "Luxury"].map((cat) => (
             <Button 
               key={cat}
-              variant={activeCategory === cat ? "default" : "ghost"} 
-              className="rounded-full"
+              variant={activeCategory === cat ? "default" : "outline"} 
+              className={`rounded-full px-6 transition-all duration-300 ${activeCategory === cat ? 'shadow-lg shadow-primary/20' : 'hover:bg-white/5 border-border/50'}`}
               onClick={() => setActiveCategory(cat)}
             >
               {cat}
             </Button>
           ))}
-        </div>
+        </motion.div>
 
         {/* Vehicles Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
+        >
           {filteredVehicles.length === 0 ? (
             <div className="col-span-full py-12 text-center text-muted-foreground">
               <p>No vehicles found in the catalog.</p>
             </div>
           ) : (
             filteredVehicles.map((vehicle) => (
-              <Card key={vehicle._id} className="overflow-hidden group hover:shadow-xl transition-all duration-300 border-border/50 bg-card/40 backdrop-blur-sm">
-                <div className="aspect-[16/10] relative bg-secondary/30 overflow-hidden">
+              <motion.div key={vehicle._id} variants={itemVariants}>
+                <Card className="overflow-hidden group glass-card">
+                  <div className="aspect-[16/10] relative bg-secondary/10 overflow-hidden rounded-t-xl">
                   {vehicle.thumbnailUrl ? (
                     <img 
                       src={vehicle.thumbnailUrl} 
@@ -126,7 +160,7 @@ export default function Catalog() {
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Starts at</p>
-                      <p className="text-lg font-bold text-amber-500">₹{(vehicle.startingPrice / 100000).toFixed(2)}L</p>
+                      <p className="text-xl font-bold text-gradient">₹{(vehicle.startingPrice / 100000).toFixed(2)}L</p>
                     </div>
                   </div>
                 </CardHeader>
@@ -160,7 +194,7 @@ export default function Catalog() {
                     View Details
                   </Button>
                   
-                  <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white" onClick={() => setSelectedVehicle(vehicle)}>
+                  <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all" onClick={() => setSelectedVehicle(vehicle)}>
                     Book Test Drive
                   </Button>
                   
@@ -178,7 +212,7 @@ export default function Catalog() {
                           <Label htmlFor="phone">Phone Number</Label>
                           <Input id="phone" name="phone" required placeholder="+91 98765 43210" />
                         </div>
-                        <Button type="submit" className="w-full bg-gradient-to-r from-amber-500 to-orange-600" disabled={isEnquiring}>
+                        <Button type="submit" className="w-full shadow-lg shadow-primary/20" disabled={isEnquiring}>
                           {isEnquiring ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Tag className="h-4 w-4 mr-2" />}
                           Submit Enquiry
                         </Button>
@@ -235,7 +269,7 @@ export default function Catalog() {
                         </div>
                         <div className="flex justify-end pt-4 gap-3">
                           <Button variant="outline" onClick={() => setDetailsVehicle(null)}>Close</Button>
-                          <Button className="bg-gradient-to-r from-amber-500 to-orange-600" onClick={() => {
+                          <Button className="shadow-lg shadow-primary/20" onClick={() => {
                             setDetailsVehicle(null);
                             setSelectedVehicle(vehicle);
                           }}>
@@ -247,9 +281,10 @@ export default function Catalog() {
                   </Dialog>
                 </CardFooter>
               </Card>
+              </motion.div>
             ))
           )}
-        </div>
+        </motion.div>
       </div>
     </div>
   );

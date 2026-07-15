@@ -39,7 +39,7 @@ export function AppHeader({ onToggleTheme, isDark }: AppHeaderProps) {
   };
 
   return (
-    <header className="flex items-center justify-between px-6 py-3 border-b border-border/40 bg-background/80 backdrop-blur-sm">
+    <header className="flex items-center justify-between px-6 py-3 mx-6 mt-4 mb-2 rounded-2xl glass-panel relative z-20">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 text-sm">
