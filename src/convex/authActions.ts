@@ -27,8 +27,9 @@ export const register = mutation({
   },
   handler: async (ctx, args) => {
     // Check if email exists
+    const normalizedEmail = args.email.toLowerCase().trim();
     const existing = await ctx.db.query("users")
-      .withIndex("email", (q) => q.eq("email", args.email))
+      .withIndex("email", (q) => q.eq("email", normalizedEmail))
       .first();
     
     let userId = existing?._id;
@@ -48,7 +49,7 @@ export const register = mutation({
       // Create a brand new user
       userId = await ctx.db.insert("users", {
         name: args.name,
-        email: args.email,
+        email: normalizedEmail,
         role: (args.role as any) ?? "sales_executive",
         totalXP: 0,
         level: 1,
@@ -84,8 +85,9 @@ export const login = mutation({
     password: v.string(),
   },
   handler: async (ctx, args) => {
+    const normalizedEmail = args.email.toLowerCase().trim();
     const user = await ctx.db.query("users")
-      .withIndex("email", (q) => q.eq("email", args.email))
+      .withIndex("email", (q) => q.eq("email", normalizedEmail))
       .first();
 
     if (!user) {

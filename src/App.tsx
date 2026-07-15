@@ -37,7 +37,19 @@ export default function AppLayout() {
   }
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full overflow-hidden bg-background ambient-bg">
+      {/* Premium Cinematic Dashboard Background */}
+      <div className="fixed inset-0 bg-[#080A0D] z-[-3]"></div>
+      <div 
+        className="fixed inset-0 z-[-2] bg-cover bg-center bg-no-repeat opacity-40 transition-opacity duration-1000"
+        style={{ backgroundImage: 'url(/showroom_bg.jpg)' }}
+      ></div>
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1]">
+        <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-primary/20 rounded-full blur-[100px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[10%] w-[50vw] h-[50vw] bg-destructive/15 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s', animationDuration: '6s' }}></div>
+        <div className="absolute top-[30%] right-[-10%] w-[30vw] h-[30vw] bg-cyan-500/10 rounded-full blur-[90px] animate-pulse" style={{ animationDelay: '1s', animationDuration: '5s' }}></div>
+      </div>
+
+      <div className="flex h-screen w-full overflow-hidden bg-transparent">
         <AppSidebar />
         <SidebarInset className="flex-1 overflow-hidden bg-transparent">
           <AppHeader onToggleTheme={toggleTheme} isDark={isDark} />
